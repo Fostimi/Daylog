@@ -24,7 +24,7 @@ application.
 | ✅ | Habitudes et hydratation |
 | ✅ | Sauvegarde, restauration, partage sélectif |
 | ✅ | Profil modifiable et remise à zéro |
-| ⬜ | Bilan et graphiques |
+| ✅ | Bilan, graphiques et phrases de synthèse |
 | ⬜ | Activité physique, santé et traitements, argent, apprentissage |
 | ⬜ | Verrouillage par code, notifications, installation depuis les stores |
 
@@ -67,9 +67,9 @@ npm run build    # version de production dans dist/
 ## Vérifier
 
 ```bash
-npm test                  # 73 tests unitaires
+npm test                  # 83 tests unitaires
 npm run test:timezones    # la suite complète dans 10 fuseaux horaires
-npm run smoke             # 83 vérifications dans un vrai navigateur
+npm run smoke             # 94 vérifications dans un vrai navigateur
 npm run verify            # tout l'enchaînement
 ```
 

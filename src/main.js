@@ -39,9 +39,20 @@ async function boot() {
     // qu'au moment ou on l'ouvre : la plupart des ouvertures de l'application ne
     // le chargent jamais.
     const showApp = async () => {
-      const view = createExpressView({ store, root, onOpenSettings: showSettings });
+      const view = createExpressView({
+        store,
+        root,
+        onOpenSettings: showSettings,
+        onOpenBilan: showBilan,
+      });
       await view.refreshBackupNeed();
       view.render();
+    };
+
+    // Le bilan et ses graphiques ne sont telecharges qu'a leur ouverture.
+    const showBilan = async () => {
+      const { createBilanView } = await import('./ui/bilan.js');
+      createBilanView({ store, root, onBack: showApp }).render();
     };
 
     const showSettings = async () => {

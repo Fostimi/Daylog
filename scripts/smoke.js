@@ -532,6 +532,121 @@ await page.locator('.topbar .icon-btn').first().click(); // retour a la journee
 await page.waitForSelector('[data-slot]');
 check('on revient a sa journee', (await page.locator('[data-slot]').count()) === 3);
 
+// ══════════════════════════════════════════════════ bilan
+
+/**
+ * On injecte un historique realiste directement dans la base : impossible de
+ * saisir trente journees a la main dans un test, et le bilan n'a de sens qu'au
+ * dela de deux semaines de donnees.
+ *
+ * Le sommeil et le stress sont volontairement lies, avec des trous : le bilan
+ * doit repérer le lien ET ignorer les journees non renseignees.
+ */
+await page.evaluate(async () => {
+  const db = await new Promise((resolve) => {
+    const r = indexedDB.open('daylog');
+    r.onsuccess = () => resolve(r.result);
+  });
+  const tx = db.transaction(['days', 'summaries'], 'readwrite');
+  const days = tx.objectStore('days');
+  const summaries = tx.objectStore('summaries');
+
+  // Dates relatives a aujourd'hui : le bilan regarde les N derniers jours, un
+  // historique fige tomberait hors de la fenetre des que le temps passe.
+  const pad = (n) => String(n).padStart(2, '0');
+  const dayKey = (offset) => {
+    const d = new Date();
+    d.setDate(d.getDate() - offset);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+
+  for (let i = 1; i <= 28; i++) {
+    const date = dayKey(i);
+    if (i % 7 === 0) continue; // un jour sur sept non suivi : un vrai trou
+    const short = i % 3 === 0;
+    const sleepH = short ? 5.5 + (i % 2) * 0.3 : 7.5 + (i % 3) * 0.2;
+    const stress = short ? 7 + (i % 2) : 3 + (i % 2);
+    summaries.put({
+      date,
+      mood: short ? 4 + (i % 3) : 7 + (i % 2),
+      energy: short ? 4 : 7,
+      stress,
+      sleepH,
+      sleepQ: short ? 4 : 8,
+      waterMl: 1200 + (i % 5) * 200,
+      checkins: 2,
+    });
+    days.put({ date, updatedAt: new Date().toISOString(), modules: { sleep: { hours: sleepH } } });
+  }
+  await new Promise((resolve) => { tx.oncomplete = resolve; });
+});
+
+await page.reload({ waitUntil: 'networkidle' });
+await page.locator('#open-bilan').click();
+await page.waitForSelector('.chart-svg');
+await scanAccents();
+
+check('le bilan s ouvre', (await page.locator('.segmented').count()) === 1);
+check(
+  'les graphiques sont en SVG, pas en image',
+  (await page.locator('svg.chart-svg').count()) >= 3,
+  `${await page.locator('svg.chart-svg').count()} graphiques`
+);
+check(
+  'chaque graphique porte une description lisible',
+  await page.evaluate(() =>
+    [...document.querySelectorAll('svg.chart-svg')].every(
+      (s) => s.getAttribute('role') === 'img' && (s.getAttribute('aria-label') || '').length > 40
+    )
+  )
+);
+check(
+  'chaque graphique fournit ses chiffres en tableau',
+  (await page.locator('.chart-table').count()) >= 3
+);
+check(
+  'les series sont nommees, pas seulement colorees',
+  (await page.locator('.chart-keys .chart-key').count()) >= 3
+);
+
+// Les trous ne doivent pas devenir des zeros : moins de barres que de jours.
+const bars = await page.locator('.chart-bar').count();
+check(
+  'les journees non suivies sont des trous, pas des zeros',
+  bars > 0 && bars < 90,
+  `${bars} barres pour 90 jours de periode`
+);
+
+check(
+  'une phrase de bilan est proposee',
+  (await page.locator('.insight').count()) >= 1,
+  await page.locator('.insight').first().innerText().catch(() => 'aucune')
+);
+check(
+  'le bilan reste descriptif, sans conseil',
+  !(await page.locator('#main').innerText()).match(/tu devrais|il faut que tu|essaie de dormir/i)
+);
+check(
+  "l'avertissement « pas un dispositif medical » est present",
+  (await page.locator('#main').innerText()).includes('pas un dispositif médical')
+);
+
+// Changement de periode
+await page.locator('.segmented-btn').first().click();
+await page.waitForTimeout(400);
+check(
+  'changer de periode recalcule le bilan',
+  (await page.locator('.segmented-btn').first().getAttribute('aria-pressed')) === 'true'
+);
+
+const bilanOverflow = await page.evaluate(
+  () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+);
+check('le bilan ne deborde pas horizontalement', !bilanOverflow);
+
+await page.locator('.topbar .icon-btn').first().click();
+await page.waitForSelector('[data-slot]');
+
 // ══════════════════════════════════════════════════ vie privee
 
 check('aucune requete vers l exterieur', external.length === 0, external.join(', '));

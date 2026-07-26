@@ -152,9 +152,9 @@ saisie puisse devenir du balisage.
 
 | Commande | Ce qu'elle couvre |
 |---|---|
-| `npm test` | 73 tests unitaires |
+| `npm test` | 83 tests unitaires |
 | `npm run test:timezones` | la suite complète dans 10 fuseaux |
-| `npm run smoke` | 83 vérifications dans un vrai navigateur |
+| `npm run smoke` | 94 vérifications dans un vrai navigateur |
 | `npm run verify` | tout l'enchaînement |
 
 Le test de bout en bout intercepte **toutes** les requêtes réseau et échoue s'il
@@ -336,3 +336,49 @@ La catégorie est enregistrée quand l'activité vient d'une suggestion, et rest
 vide sinon. Elle ne sert à rien aujourd'hui ; elle permettra plus tard de dire
 « tu as pris trois moments pour toi cette semaine » sans jamais avoir demandé à
 personne de classer ses activités à la main.
+
+## Décision 17 — Des graphiques en SVG écrit à la main
+
+Le v5 chargeait 200 Ko de Chart.js depuis un CDN pour dessiner des barres et
+des courbes — plus lourd que toute l'application actuelle, et une requête vers
+un serveur tiers à chaque ouverture. `src/ui/charts.js` fait le même travail en
+quelques kilo-octets, sans réseau.
+
+Ce n'est pas qu'une question de poids. Chart.js dessine dans un `<canvas>`,
+c'est-à-dire une **image** : un lecteur d'écran n'y voit rien, et agrandir la
+police du système ne change rien. En SVG, chaque graphique porte une
+description lisible et s'accompagne d'un tableau de ses valeurs — consultable
+par tout le monde, pas seulement par qui distingue bien les couleurs. Les
+séries sont d'ailleurs nommées dans une légende, jamais identifiées par la
+seule couleur.
+
+Règle tenue partout : **une valeur absente est un trou, jamais un zéro.** Les
+courbes se coupent et les barres disparaissent aux jours non renseignés. Une
+courbe qui plongerait à zéro raconterait quelque chose de faux.
+
+## Décision 18 — Le bilan dit une phrase, ou se tait
+
+Afficher des courbes ne suffit pas : l'application demandait beaucoup et ne
+rendait rien. `src/core/insights.js` produit des phrases — et surtout n'en
+produit pas quand il n'y a rien d'honnête à dire.
+
+Quatre garde-fous :
+
+1. **Quatorze jours minimum** où les *deux* valeurs existent, et un lien trop
+   faible n'est pas mentionné. Le v5 annonçait « corrélation forte » sur sept
+   points, en appariant en plus des jours différents.
+2. **Deux observations au maximum**, les plus nettes. Empiler cinq
+   affirmations dilue les deux qui comptent et donne l'impression d'un
+   horoscope.
+3. **Descriptif, jamais prescriptif.** « Tes nuits les plus longues
+   s'accompagnent d'un stress plus bas » est une observation ; « dors plus »
+   serait un conseil médical. Un test vérifie l'absence de formulations
+   prescriptives.
+4. **Le rappel « ce ne sont pas des explications » figure une fois** sous
+   l'ensemble. Répété après chaque phrase, il doublait la longueur du bloc et
+   se mettait à ressembler à une clause juridique qu'on cesse de lire.
+
+Les phrases sont **écrites en toutes lettres**, pas composées à partir de
+morceaux. Le premier jet assemblait sujet, adverbe et verbe génériquement et
+produisait « ton nuits nettement va à l'inverse de ton stress ». Le français
+s'accorde : on l'écrit. Un test verrouille l'absence de ce genre de faute.

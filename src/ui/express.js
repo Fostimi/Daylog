@@ -19,7 +19,7 @@ import { toDate, today, addDays, isFuture } from '../core/date.js';
 import { backupUrgency, daysSinceBackup } from '../core/backup.js';
 import * as db from '../core/db.js';
 
-export function createExpressView({ store, root, onOpenSettings }) {
+export function createExpressView({ store, root, onOpenSettings, onOpenBilan }) {
   let backupLevel = null; // null | 'due' | 'overdue'
 
   /** Le rappel est evalue une fois par ouverture, pas a chaque rendu. */
@@ -225,6 +225,13 @@ export function createExpressView({ store, root, onOpenSettings }) {
         disabled: isFuture(addDays(date, 1)),
         onClick: () => go(1),
       }, '→'),
+      el('button', {
+        class: 'icon-btn',
+        type: 'button',
+        id: 'open-bilan',
+        'aria-label': 'Voir mon bilan',
+        onClick: () => onOpenBilan?.(),
+      }, '📊'),
       // Pastille sur l'engrenage : le bandeau se lit une fois puis se noie dans
       // la page, la pastille reste visible tant que la sauvegarde n'est pas
       // faite. Le libelle accessible porte l'information, pas seulement la
