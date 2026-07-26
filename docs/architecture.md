@@ -154,7 +154,7 @@ saisie puisse devenir du balisage.
 |---|---|
 | `npm test` | 61 tests unitaires |
 | `npm run test:timezones` | la suite complète dans 10 fuseaux |
-| `npm run smoke` | 64 vérifications dans un vrai navigateur |
+| `npm run smoke` | 67 vérifications dans un vrai navigateur |
 | `npm run verify` | tout l'enchaînement |
 
 Le test de bout en bout intercepte **toutes** les requêtes réseau et échoue s'il

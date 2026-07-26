@@ -456,6 +456,51 @@ const overflow = await page.evaluate(
 check('a 200 % de taille de texte, pas de defilement horizontal', !overflow);
 await page.addStyleTag({ content: 'html { font-size: 100% }' });
 
+// ══════════════════════════════════════════════════ installation
+
+/**
+ * Les icones referencees doivent exister.
+ *
+ * Sans elles, « Ajouter a l'ecran d'accueil » donne une icone vide sur Android
+ * et une capture de la page sur iOS. Rien dans l'application ne signale le
+ * probleme : il ne se voit qu'au moment de l'installer.
+ */
+const manifest = await page.evaluate(async () => {
+  const link = document.querySelector('link[rel="manifest"]');
+  const res = await fetch(link.href);
+  return { ok: res.ok, data: await res.json(), base: link.href };
+});
+check('le manifeste est lisible', manifest.ok);
+check(
+  'le manifeste declare une icone adaptable (Android)',
+  manifest.data.icons.some((i) => i.purpose === 'maskable')
+);
+
+const iconChecks = await page.evaluate(async ({ data, base }) => {
+  const urls = [
+    ...data.icons.map((i) => i.src),
+    ...[...document.querySelectorAll('link[rel="apple-touch-icon"]')].map((l) => l.getAttribute('href')),
+  ];
+  const results = [];
+  for (const src of urls) {
+    const url = new URL(src, base).href;
+    try {
+      const res = await fetch(url);
+      results.push({ src, ok: res.ok, status: res.status });
+    } catch {
+      results.push({ src, ok: false, status: 0 });
+    }
+  }
+  return results;
+}, manifest);
+
+const missing = iconChecks.filter((i) => !i.ok);
+check(
+  'toutes les icones declarees existent',
+  missing.length === 0,
+  missing.map((m) => `${m.src} (${m.status})`).join(', ')
+);
+
 // ══════════════════════════════════════════════════ poids et theme
 
 const sizes = await page.evaluate(() =>
