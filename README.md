@@ -30,18 +30,16 @@ conseil thérapeutique, aucun remplacement d'un professionnel de santé.
 Aucune intelligence artificielle. Tous les calculs sont des formules décrites
 dans [la documentation](docs/) et lisibles dans le code.
 
-## Démarrer
+## L'essayer
+
+Voir **[docs/deploiement.md](docs/deploiement.md)** — trois façons, de la plus
+simple (une adresse à ouvrir sur son téléphone) à la plus technique.
+
+En local :
 
 ```bash
 npm install
-npm run dev      # puis ouvrir l'adresse affichée
-```
-
-Le serveur écoute sur toutes les interfaces : l'adresse en `192.168.x.x`
-affichée au démarrage s'ouvre directement depuis un téléphone sur le même
-réseau Wi-Fi.
-
-```bash
+npm run dev      # l'adresse en 192.168.x.x s'ouvre depuis un téléphone
 npm run build    # version de production dans dist/
 ```
 

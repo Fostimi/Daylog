@@ -109,10 +109,14 @@ export function scale({
       valueLabel,
     ]),
     group,
+    // Les reperes portent leur valeur ("1 au plus bas" plutot que "au plus
+    // bas"). Ainsi ils restent justes meme si la grille repasse sur deux
+    // rangees a grande taille de police, ou l'extremite gauche n'est plus
+    // alignee sous le 1.
     (lowLabel || highLabel) &&
       el('div', { class: 'scale-ends', 'aria-hidden': 'true' }, [
-        el('span', {}, lowLabel),
-        el('span', {}, highLabel),
+        el('span', {}, lowLabel ? `${min} ${lowLabel}` : ''),
+        el('span', {}, highLabel ? `${max} ${highLabel}` : ''),
       ]),
   ]);
 

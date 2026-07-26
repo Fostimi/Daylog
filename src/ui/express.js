@@ -40,10 +40,12 @@ export function createExpressView({ store, root }) {
       store.update('mood', { checkins: next });
     }
 
+    // Les reperes sont prefixes de leur valeur a l'affichage ("1 au plus bas"),
+    // d'ou l'absence de majuscule ici.
     const controls = [
-      ['mood', 'Humeur', 'Au plus bas', 'Au top'],
-      ['energy', 'Energie', 'Vide', 'Plein'],
-      ['stress', 'Stress', 'Serein', 'Sous pression'],
+      ['mood', 'Humeur', 'au plus bas', 'au top'],
+      ['energy', 'Energie', 'vide', 'plein'],
+      ['stress', 'Stress', 'serein', 'sous pression'],
     ].map(([key, label, low, high]) =>
       scale({
         id: `${slot.id}-${key}`,

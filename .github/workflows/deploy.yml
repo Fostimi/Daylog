@@ -1,0 +1,78 @@
+# Publie l'application sur GitHub Pages a chaque push.
+#
+# Une fois active, l'adresse est https://fostimi.github.io/Daylog/ et se met a
+# jour toute seule, environ une minute apres chaque modification.
+#
+# ATTENTION : GitHub Pages ne fonctionne sur un depot PRIVE qu'avec un compte
+# payant (Pro, Team ou Enterprise). Sur un compte gratuit, il faut que le depot
+# soit public. Voir docs/deploiement.md pour les alternatives.
+#
+# A faire une seule fois avant que cela marche :
+#   Depot -> Settings -> Pages -> Source : "GitHub Actions"
+
+name: Deploiement
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+# Un seul deploiement a la fois ; on ne coupe pas celui en cours.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tests unitaires
+        run: npm test
+      - name: Tests dans dix fuseaux horaires
+        run: npm run test:timezones
+
+  construire:
+    needs: verifier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      # Verification de bout en bout dans un vrai navigateur, y compris le
+      # controle qu'aucune requete ne sort de l'application. Si une dependance
+      # introduisait un appel reseau, le deploiement echouerait ici.
+      - name: Installer le navigateur de test
+        run: npx playwright install --with-deps chromium
+      - name: Verification de bout en bout
+        run: npm run smoke
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deployer:
+    needs: construire
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
