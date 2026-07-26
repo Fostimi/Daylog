@@ -25,7 +25,7 @@ import {
 } from '../core/backup.js';
 import { allModules, enabledModules } from '../core/modules.js';
 
-export function createSettingsView({ store, root, onBack }) {
+export function createSettingsView({ store, root, onBack, onOpenProfile }) {
   let status = null;
   let busy = false;
 
@@ -177,6 +177,13 @@ export function createSettingsView({ store, root, onBack }) {
           onClick: onBack,
         }, '←'),
         el('h1', {}, 'Mes données'),
+        el('button', {
+          class: 'icon-btn',
+          type: 'button',
+          id: 'open-profile',
+          'aria-label': 'Ouvrir mon profil',
+          onClick: () => onOpenProfile?.(),
+        }, '👤'),
       ]),
 
       el('main', { class: 'app', id: 'main' }, [

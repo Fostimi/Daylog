@@ -317,7 +317,10 @@ body {
 }
 
 .scale-btn {
-  min-height: var(--tap);
+  /* Plus haut que le minimum tactile : la surface de visee grandit sans
+     elargir la rangee, donc sans casser l'alignement des reperes sous le 1 et
+     le 10. C'est la dimension qu'on peut augmenter gratuitement. */
+  min-height: 3.25rem;
   padding: 0.25rem;
   font-family: inherit;
   font-size: 0.875rem;
@@ -914,4 +917,119 @@ body {
 .onb-option:has(.onb-input:disabled) {
   opacity: 0.7;
   cursor: default;
+}
+
+.checkin-stamp {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.checkin-stamp:empty {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ suggestions */
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
+}
+.suggestions:empty {
+  display: none;
+}
+
+.suggestions-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.suggestion {
+  min-height: 2.25rem;
+  padding: 0.375rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  border-radius: 1.5rem;
+  cursor: pointer;
+}
+.suggestion:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  border-style: solid;
+  background: var(--accent-soft);
+}
+
+.card-sep {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
+}
+
+/* Action destructrice : elle doit se distinguer sans crier. Le rouge est
+   reserve a la bordure et au texte, pas au fond, pour qu'elle n'attire pas
+   l'oeil plus que les actions utiles. */
+.btn-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: transparent;
+}
+.btn-danger:hover {
+  color: #fff;
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+/* ------------------------------------------------------------------ alerte sauvegarde */
+
+.icon-btn.has-alert {
+  position: relative;
+}
+.icon-btn.has-alert::after {
+  content: '';
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--warn);
+  box-shadow: 0 0 0 0.125rem var(--bg);
+}
+.icon-btn.has-alert.is-overdue::after {
+  background: var(--danger);
+}
+
+.banner.is-urgent {
+  border-color: var(--danger);
+}
+
+/* ------------------------------------------------------------------ grand ecran */
+
+/*
+ * Sur ordinateur, une colonne unique de 42rem laissait deux grandes bandes
+ * vides de chaque cote. Les cartes passent donc sur deux colonnes des qu'il y a
+ * la place, et la largeur maximale augmente.
+ *
+ * `masonry` n'existe pas encore partout : on garde une grille reguliere, quitte
+ * a ce que les cartes d'une meme rangee ne fassent pas la meme hauteur.
+ */
+@media (min-width: 60rem) {
+  .app {
+    max-width: 64rem;
+  }
+
+  /* La saisie du jour reste seule sur toute la largeur : c'est ce qu'on vient
+     faire, ca ne se met pas dans un coin. */
+  [data-role='modules'] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 0.75rem;
+    align-items: start;
+  }
 }

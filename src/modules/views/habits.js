@@ -21,6 +21,7 @@
 import { el, mount } from '../../ui/dom.js';
 import * as db from '../../core/db.js';
 import { createListItem, activeItems } from '../../core/ids.js';
+import { suggest, categoryOf, normalize } from '../suggestions.js';
 
 const KIND = 'habit';
 
@@ -63,15 +64,19 @@ export async function render({ store }) {
     const clean = label.trim();
     if (!clean) return;
     // Doublon : on ne cree pas une seconde habitude du meme nom, mais on
-    // reactive celle qui existe deja si elle etait archivee.
-    const existing = items.find((i) => i.label.toLowerCase() === clean.toLowerCase());
+    // reactive celle qui existe deja si elle etait archivee. La comparaison
+    // ignore la casse ET les accents, sinon « Meditation » et « Méditation »
+    // coexisteraient comme deux habitudes distinctes.
+    const existing = items.find((i) => normalize(i.label) === normalize(clean));
     if (existing) {
       if (existing.archivedAt) {
         existing.archivedAt = null;
         await db.putListItem(existing);
       }
     } else {
-      const item = createListItem(KIND, clean);
+      // La categorie n'est enregistree que si le libelle correspond a une
+      // suggestion connue. Rien n'est devine.
+      const item = createListItem(KIND, clean, { category: categoryOf(clean) });
       await db.putListItem(item);
       items.push(item);
     }
@@ -124,7 +129,9 @@ export async function render({ store }) {
       type: 'text',
       class: 'input',
       id: 'habit-new',
-      placeholder: 'Méditation, lecture, marche…',
+      autocomplete: 'off',
+      placeholder: 'Ce que tu as fait…',
+      onInput: () => drawSuggestions(),
       onKeydown: (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -134,23 +141,60 @@ export async function render({ store }) {
       },
     });
 
+    const suggestionBox = el('div', {
+      class: 'suggestions',
+      dataset: { role: 'suggestions' },
+      role: 'group',
+      'aria-label': 'Suggestions',
+    });
+
+    function drawSuggestions() {
+      const matches = suggest(input.value, {
+        exclude: activeItems(items).map((i) => i.label),
+      });
+      mount(
+        suggestionBox,
+        matches.length
+          ? [
+              el('span', { class: 'suggestions-label' }, 'Suggestions :'),
+              ...matches.map((sug) =>
+                el('button', {
+                  type: 'button',
+                  class: 'suggestion',
+                  onClick: () => {
+                    add(sug.label);
+                    input.value = '';
+                  },
+                }, sug.label)
+              ),
+            ]
+          : []
+      );
+    }
+
     mount(container, [
       el('div', { class: 'card-head' }, [
-        el('h2', { class: 'card-title' }, 'Habitudes'),
-        list.length &&
-          el('span', { class: 'card-count' }, `${doneSet.size} sur ${list.length}`),
+        el('h2', { class: 'card-title' }, 'Ce que tu as fait'),
+        // « 3 sur 5 » sous-entendrait un objectif a atteindre, alors qu'il s'agit
+        // d'un releve de ce qui a eu lieu. On compte ce qui est fait, sans
+        // afficher de reste a faire.
+        list.length && doneSet.size > 0 &&
+          el('span', { class: 'card-count' },
+            doneSet.size === 1 ? '1 activité notée' : `${doneSet.size} activités notées`
+          ),
       ]),
       list.length
         ? el('div', { class: 'chips' }, chips)
         : el('p', { class: 'card-hint' },
-            "Ajoute ce que tu veux tenir au quotidien. Rien n'est impose, et tu peux " +
-              'changer d\'avis quand tu veux.'
+            "Note ce que tu as fait aujourd'hui. Rien à tenir, rien à réussir : " +
+              "c'est un relevé, pas une liste de devoirs."
           ),
       el('div', { class: 'add-row' }, [
-        el('label', { class: 'sr-only', for: 'habit-new' }, 'Nouvelle habitude'),
+        el('label', { class: 'sr-only', for: 'habit-new' }, 'Ajouter une activité'),
         input,
         el('button', {
           type: 'button',
+          id: 'habit-add',
           class: 'btn',
           onClick: () => {
             add(input.value);
@@ -158,12 +202,14 @@ export async function render({ store }) {
           },
         }, 'Ajouter'),
       ]),
+      suggestionBox,
       list.length > 0 &&
         el('p', { class: 'card-hint', style: { marginTop: '0.75rem', marginBottom: '0' } },
-          "Retirer une habitude ne touche pas aux journées déjà enregistrées : " +
+          "Retirer une activité ne touche pas aux journées déjà enregistrées : " +
             'leurs scores restent ceux du moment.'
         ),
     ]);
+    drawSuggestions();
   }
 
   draw();

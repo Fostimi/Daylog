@@ -11,25 +11,24 @@
  */
 
 import { el, mount, announce } from './dom.js';
-import { scale, textarea, numberField, timeField } from './controls.js';
+import { scale, textarea } from './controls.js';
 import { CHECKIN_SLOTS, createCheckin } from '../modules/index.js';
 import { enabledModules } from '../core/modules.js';
 import { formatDayLong, formatTime } from '../core/i18n.js';
 import { toDate, today, addDays, isFuture } from '../core/date.js';
-import { shouldRemindBackup, daysSinceBackup } from '../core/backup.js';
+import { backupUrgency, daysSinceBackup } from '../core/backup.js';
 import * as db from '../core/db.js';
 
 export function createExpressView({ store, root, onOpenSettings }) {
-  let detailOpen = false;
-  let backupNeeded = false;
+  let backupLevel = null; // null | 'due' | 'overdue'
 
   /** Le rappel est evalue une fois par ouverture, pas a chaque rendu. */
   async function refreshBackupNeed() {
     try {
       const totalDays = await db.countDays();
-      backupNeeded = shouldRemindBackup(store.getSettings(), { totalDays });
+      backupLevel = backupUrgency(store.getSettings(), { totalDays });
     } catch {
-      backupNeeded = false;
+      backupLevel = null;
     }
   }
 
@@ -105,9 +104,56 @@ export function createExpressView({ store, root, onOpenSettings }) {
             logged ? summaryLine(data) : 'Pas encore noté'
           ),
         ]),
-        el('div', { class: 'checkin-body' }, controls.map((c) => c.node)),
+        el('div', { class: 'checkin-body' }, [
+          ...controls.map((c) => c.node),
+          // Note courte, propre a ce moment de la journee. Elle repond a un
+          // besoin different de la note du jour : celle-ci capte l'instant
+          // (« reunion tendue », « bien dormi »), l'autre fait le bilan.
+          noteField(slot, data, write),
+          el('p', {
+            class: 'checkin-stamp',
+            dataset: { role: 'stamp' },
+          }, stampLine(data)),
+        ]),
       ]
     );
+  }
+
+  /** Champ de note courte d'un check-in. */
+  function noteField(slot, data, write) {
+    const input = el('input', {
+      type: 'text',
+      id: `${slot.id}-note`,
+      class: 'input',
+      maxlength: '140',
+      placeholder: 'Un mot sur ce moment…',
+      onInput: (e) => {
+        const value = e.target.value.trim() || null;
+        write({
+          note: value,
+          // Ecrire une note vaut enregistrement du check-in, comme repondre a
+          // une echelle : on ne demande pas de valider quoi que ce soit.
+          loggedAt: value === null ? data.loggedAt : new Date().toISOString(),
+        });
+        refreshCheckinHeader(slot.id);
+      },
+    });
+    input.value = data.note || '';
+    return el('div', { class: 'field' }, [
+      el('label', { class: 'field-label', for: `${slot.id}-note` }, 'Note du moment'),
+      input,
+    ]);
+  }
+
+  /**
+   * Horodatage du check-in.
+   *
+   * Il se met a jour a chaque modification : ce qui compte est de savoir quand
+   * remonte l'information affichee, pas quand on a repondu la premiere fois.
+   */
+  function stampLine(data) {
+    if (!data?.loggedAt) return '';
+    return `Noté à ${formatTime(data.loggedAt)}`;
   }
 
   /** Resume d'un check-in replie : ce qui a ete note, en une ligne. */
@@ -116,6 +162,7 @@ export function createExpressView({ store, root, onOpenSettings }) {
     if (data.mood !== null && data.mood !== undefined) parts.push(`humeur ${data.mood}`);
     if (data.energy !== null && data.energy !== undefined) parts.push(`énergie ${data.energy}`);
     if (data.stress !== null && data.stress !== undefined) parts.push(`stress ${data.stress}`);
+    if (!parts.length && data.note) return data.note;
     return parts.length ? parts.join(' · ') : `Noté à ${formatTime(data.loggedAt)}`;
   }
 
@@ -134,68 +181,8 @@ export function createExpressView({ store, root, onOpenSettings }) {
       time.textContent = logged ? summaryLine(data) : 'Pas encore noté';
       time.classList.toggle('is-logged', logged);
     }
-  }
-
-  // ---------------------------------------------------------------- detail
-
-  function renderDetail() {
-    const sleep = store.get('sleep') || {};
-
-    const bed = timeField({
-      id: 'sleep-bed',
-      label: 'Coucher',
-      value: sleep.bedtime,
-      onInput: (v) => {
-        store.update('sleep', { bedtime: v });
-        recomputeHours();
-      },
-    });
-    const wake = timeField({
-      id: 'sleep-wake',
-      label: 'Lever',
-      value: sleep.wake,
-      onInput: (v) => {
-        store.update('sleep', { wake: v });
-        recomputeHours();
-      },
-    });
-    const hours = numberField({
-      id: 'sleep-hours',
-      label: 'Durée',
-      value: sleep.hours,
-      step: 0.25,
-      min: 0,
-      max: 24,
-      unit: 'h',
-      onInput: (v) => store.update('sleep', { hours: v }),
-    });
-
-    function recomputeHours() {
-      const s = store.get('sleep') || {};
-      if (!s.bedtime || !s.wake) return;
-      const [bh, bm] = s.bedtime.split(':').map(Number);
-      const [wh, wm] = s.wake.split(':').map(Number);
-      let mins = wh * 60 + wm - (bh * 60 + bm);
-      if (mins < 0) mins += 1440; // on a traverse minuit
-      const value = Math.round((mins / 60) * 100) / 100;
-      hours.set(value);
-      store.update('sleep', { hours: value });
-    }
-
-    const quality = scale({
-      id: 'sleep-quality',
-      label: 'Qualité du sommeil',
-      value: sleep.quality,
-      lowLabel: 'mauvaise',
-      highLabel: 'excellente',
-      onChange: (v) => store.update('sleep', { quality: v }),
-    });
-
-    return el('div', { class: 'card' }, [
-      el('h2', { class: 'card-title' }, 'Sommeil'),
-      el('div', { class: 'field-row' }, [bed.node, wake.node, hours.node]),
-      quality.node,
-    ]);
+    const stamp = section.querySelector('[data-role="stamp"]');
+    if (stamp) stamp.textContent = stampLine(data);
   }
 
   // ------------------------------------------------------------------ note
@@ -238,10 +225,16 @@ export function createExpressView({ store, root, onOpenSettings }) {
         disabled: isFuture(addDays(date, 1)),
         onClick: () => go(1),
       }, '→'),
+      // Pastille sur l'engrenage : le bandeau se lit une fois puis se noie dans
+      // la page, la pastille reste visible tant que la sauvegarde n'est pas
+      // faite. Le libelle accessible porte l'information, pas seulement la
+      // couleur.
       el('button', {
-        class: 'icon-btn',
+        class: `icon-btn${backupLevel ? ` has-alert is-${backupLevel}` : ''}`,
         type: 'button',
-        'aria-label': 'Mes données et réglages',
+        'aria-label': backupLevel
+          ? 'Mes données et réglages — sauvegarde à faire'
+          : 'Mes données et réglages',
         onClick: () => onOpenSettings?.(),
       }, '⚙'),
     ]);
@@ -250,16 +243,6 @@ export function createExpressView({ store, root, onOpenSettings }) {
       el('span', { class: 'save-dot', 'aria-hidden': 'true' }),
       el('span', { dataset: { role: 'save-text' } }, 'Tout est enregistré automatiquement'),
     ]);
-
-    const detailBtn = el('button', {
-      class: 'btn btn-block',
-      type: 'button',
-      'aria-expanded': detailOpen ? 'true' : 'false',
-      onClick: () => {
-        detailOpen = !detailOpen;
-        render();
-      },
-    }, detailOpen ? 'Masquer le détail' : 'Ajouter du détail');
 
     // Emplacement des modules actifs. Ils sont ajoutes apres coup, une fois leur
     // ecran telecharge, pour que la saisie du jour soit utilisable
@@ -277,8 +260,6 @@ export function createExpressView({ store, root, onOpenSettings }) {
           ...CHECKIN_SLOTS.map(renderCheckin),
         ]),
         renderNote(),
-        detailOpen && renderDetail(),
-        detailBtn,
         modulesSlot,
         el('p', { class: 'footer-note' }, [
           saveState,
@@ -318,14 +299,17 @@ export function createExpressView({ store, root, onOpenSettings }) {
    * perdre.
    */
   function backupBanner() {
-    if (!backupNeeded) return null;
+    if (!backupLevel) return null;
     const since = daysSinceBackup(store.getSettings().lastBackupAt);
-    return el('div', { class: 'banner' }, [
+    const urgent = backupLevel === 'overdue';
+    return el('div', { class: `banner${urgent ? ' is-urgent' : ''}` }, [
       el('p', {}, [
         since === null
           ? "Tu n'as jamais fait de sauvegarde. "
           : `Dernière sauvegarde il y a ${since} jours. `,
-        'Tes notes ne sont que sur cet appareil.',
+        urgent
+          ? 'Ça commence à faire long — tes notes ne sont que sur cet appareil.'
+          : 'Tes notes ne sont que sur cet appareil.',
       ]),
       el('button', {
         class: 'btn btn-sm',

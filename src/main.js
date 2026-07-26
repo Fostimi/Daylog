@@ -46,7 +46,24 @@ async function boot() {
 
     const showSettings = async () => {
       const { createSettingsView } = await import('./ui/settings.js');
-      createSettingsView({ store, root, onBack: showApp }).render();
+      createSettingsView({
+        store,
+        root,
+        onBack: showApp,
+        onOpenProfile: showProfile,
+      }).render();
+    };
+
+    const showProfile = async () => {
+      const { createProfileView } = await import('./ui/profile.js');
+      createProfileView({
+        store,
+        root,
+        onBack: showSettings,
+        // Apres une remise a zero ou une demande de nouvelle presentation, on
+        // repart du demarrage complet plutot que de rafistoler l'etat en place.
+        onReset: () => globalThis.location.reload(),
+      }).render();
     };
 
     // La presentation n'est telechargee qu'a la premiere ouverture. Les

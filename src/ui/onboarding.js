@@ -22,59 +22,10 @@
  */
 
 import { el, mount } from './dom.js';
+import { optionRow, choice } from './controls.js';
+import { THEMES, WEARABLES, MOBILITY, CYCLE } from '../modules/profile-options.js';
 
-/** Themes proposes. `modules` liste les modules a activer si le theme est retenu. */
-const THEMES = [
-  {
-    id: 'sleep',
-    label: 'Sommeil',
-    hint: 'Heures, qualité, réveils',
-    modules: ['sleep'],
-  },
-  {
-    id: 'habits',
-    label: 'Habitudes',
-    hint: 'Ce que tu veux tenir au quotidien',
-    modules: ['habits'],
-  },
-  {
-    id: 'food',
-    label: 'Alimentation',
-    hint: 'Repas et hydratation',
-    modules: ['nutrition', 'hydration'],
-  },
-];
 
-/**
- * Marques d'appareils connectes.
- *
- * Chacune nomme differemment la meme mesure. Afficher le bon terme coute deux
- * lignes et donne l'impression que l'app connait le materiel de la personne.
- */
-const WEARABLES = [
-  { id: 'garmin', label: 'Garmin', term: 'Body Battery' },
-  { id: 'suunto', label: 'Suunto', term: 'Ressources' },
-  { id: 'whoop', label: 'Whoop', term: 'Recovery' },
-  { id: 'oura', label: 'Oura', term: 'Readiness' },
-  { id: 'polar', label: 'Polar', term: 'Nightly Recharge' },
-  { id: 'fitbit', label: 'Fitbit', term: 'Daily Readiness' },
-  { id: 'apple', label: 'Apple Watch', term: 'Récupération' },
-  { id: 'other', label: 'Une autre marque', term: 'Récupération' },
-];
-
-const MOBILITY = [
-  { id: 'walking', label: 'Je marche', hint: 'Pas et distance' },
-  { id: 'wheelchair', label: 'En fauteuil roulant', hint: 'Distance et poussées' },
-  { id: 'aids', label: 'Avec une aide à la marche', hint: 'Canne, béquilles, déambulateur' },
-  { id: 'varies', label: 'Ça dépend des jours', hint: 'Tu ajusteras au quotidien' },
-];
-
-const CYCLE = [
-  { id: 'regular', label: 'Oui, plutôt régulier' },
-  { id: 'irregular', label: 'Oui, irrégulier' },
-  { id: 'suppressed', label: 'Oui, mais suspendu', hint: 'Contraception, traitement' },
-  { id: 'none', label: 'Non, pas concerné' },
-];
 
 export function createOnboarding({ store, root, onDone }) {
   // Rien n'est pre-selectionne : chaque valeur reste `null` tant que la
@@ -337,50 +288,6 @@ export function createOnboarding({ store, root, onDone }) {
     return el('div', { class: 'field' }, [
       el('label', { class: 'field-label', for: id }, label),
       build(),
-    ]);
-  }
-
-  /** Choix unique. `fieldset`/`legend` natifs : le groupe est annonce correctement. */
-  function choice({ legend, name, options, value, onSelect }) {
-    return el('fieldset', { class: 'onb-fieldset' }, [
-      el('legend', { class: 'onb-legend' }, legend),
-      ...options.map((opt) =>
-        optionRow({
-          type: 'radio',
-          name,
-          id: `${name}-${opt.id}`,
-          label: opt.label,
-          hint: opt.hint,
-          checked: value === opt.id,
-          onChange: (on) => on && onSelect(opt.id),
-        })
-      ),
-    ]);
-  }
-
-  /**
-   * Une ligne de choix.
-   *
-   * Controle natif (`input`) enveloppe dans un `label` : c'est toute la zone qui
-   * devient cliquable, le clavier fonctionne sans code, et les lecteurs d'ecran
-   * annoncent l'etat sans qu'on ait a le declarer.
-   */
-  function optionRow({ type, name, id, label, hint, checked, onChange }) {
-    const input = el('input', {
-      type,
-      name,
-      id,
-      class: 'onb-input',
-      onChange: (e) => onChange(e.target.checked),
-    });
-    input.checked = Boolean(checked);
-
-    return el('label', { class: 'onb-option', for: id }, [
-      input,
-      el('span', { class: 'onb-option-text' }, [
-        el('span', { class: 'onb-option-label' }, label),
-        hint && el('span', { class: 'onb-option-hint' }, hint),
-      ]),
     ]);
   }
 

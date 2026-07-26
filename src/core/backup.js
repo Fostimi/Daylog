@@ -226,10 +226,39 @@ export function daysSinceBackup(lastBackupAt, now = new Date()) {
  * a aucun filet automatique : perdre son telephone, c'est tout perdre. Le rappel
  * est donc une vraie fonctionnalite de securite, pas une relance commerciale.
  */
-export function shouldRemindBackup(settings, { totalDays = 0, now = new Date() } = {}) {
-  if (totalDays < 7) return false; // on ne harcele pas quelqu'un qui vient d'arriver
+export function shouldRemindBackup(settings, options = {}) {
+  return backupUrgency(settings, options) !== null;
+}
+
+/**
+ * Degre d'urgence de la sauvegarde.
+ *
+ *   null       rien a signaler
+ *   'due'      il serait temps  -> pastille ambre
+ *   'overdue'  ca fait vraiment long -> pastille rouge
+ *
+ * Deux niveaux plutot qu'un seul, parce qu'un rappel qui garde toujours la meme
+ * intensite finit par se fondre dans le decor. Mais pas plus de deux : au-dela
+ * on fabrique de l'anxiete, et le but est de proteger des donnees, pas de
+ * stresser quelqu'un tous les matins.
+ *
+ * Le seuil rouge est fixe au double du seuil ambre, avec un plancher a 45 jours :
+ * meme quelqu'un qui a regle un rappel tres frequent ne doit pas voir du rouge
+ * au bout de deux semaines.
+ */
+export function backupUrgency(settings, { totalDays = 0, now = new Date() } = {}) {
+  // On ne dit rien a quelqu'un qui vient d'arriver : il n'a encore rien a perdre.
+  if (totalDays < 7) return null;
+
   const threshold = settings?.backupReminderDays ?? 21;
+  const critical = Math.max(threshold * 2, 45);
   const since = daysSinceBackup(settings?.lastBackupAt, now);
-  if (since === null) return totalDays >= 14;
-  return since >= threshold;
+
+  if (since === null) {
+    // Jamais sauvegarde : on attend d'avoir accumule un vrai historique.
+    if (totalDays >= critical) return 'overdue';
+    return totalDays >= 14 ? 'due' : null;
+  }
+  if (since >= critical) return 'overdue';
+  return since >= threshold ? 'due' : null;
 }

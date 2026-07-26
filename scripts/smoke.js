@@ -90,17 +90,22 @@ async function readStore(store) {
  * "regulier", "repere") est une faute visible par tout le monde. Ce controle
  * inspecte le texte reellement rendu -- pas le code source -- et signale les
  * formes fautives les plus courantes, pour qu'elles ne puissent pas revenir.
+ *
+ * La liste ne contient QUE des formes qui n'existent jamais sans accent en
+ * francais. « calcule », « concerne », « masque » ou « adapte » en ont ete
+ * retires : ce sont des verbes conjugues parfaitement corrects, et les inclure
+ * faisait echouer le controle sur une phrase juste.
  */
 const SANS_ACCENT = new RegExp(
   '\\b(' +
     [
       'journee', 'journees', 'detail', 'details', 'enregistre', 'enregistree',
       'enregistrees', 'donnee', 'donnees', 'telephone', 'reglages', 'presentation',
-      'prenom', 'regulier', 'irregulier', 'concerne', 'repere', 'qualite', 'reveils',
+      'prenom', 'regulier', 'irregulier', 'repere', 'qualite', 'reveils',
       'poussees', 'bequilles', 'deambulateur', 'feminin', 'defaut', 'facon',
-      'activite', 'sante', 'connecte', 'frequence', 'oxygenation', 'masque',
-      'posee', 'consequence', 'calcule', 'precedent', 'precedents', 'plutot',
-      'adapte', 'evolue', 'etape', 'energie', 'apres', 'duree', 'echoue', 'ecran',
+      'activite', 'sante', 'connecte', 'frequence', 'oxygenation',
+      'posee', 'consequence', 'precedent', 'precedents', 'plutot',
+      'evolue', 'etape', 'energie', 'apres', 'duree', 'echoue', 'ecran',
       'creee', 'derniere', 'fevrier', 'decembre', 'arrivee', 'deja', 'tres',
       'verifier', 'accede', 'publicite', 'coeur', 'oeil',
     ].join('|') +
@@ -224,8 +229,16 @@ check(
 );
 await openAllCheckins();
 
+// On compare aux echelles reellement presentes plutot qu'a un nombre fige :
+// ajouter un module ne doit pas faire echouer ce controle pour de mauvaises
+// raisons.
+const totalScales = await page.locator('.scale').count();
 const unset = await page.locator('.scale-value.is-unset').count();
-check('aucune echelle n a de valeur par defaut', unset === 9, `${unset}/9 non renseignees`);
+check(
+  'aucune echelle n a de valeur par defaut',
+  totalScales > 0 && unset === totalScales,
+  `${unset}/${totalScales} non renseignees`
+);
 check('aucun bouton pre-selectionne', (await page.locator('.scale-btn.is-selected').count()) === 0);
 
 // Les reperes d'extremite doivent tomber sous le 1 et sous le 10.
@@ -256,6 +269,7 @@ check(
   await page.locator('[data-slot="morning"]').evaluate((n) => n.classList.contains('is-logged'))
 );
 
+await page.locator('#morning-note').fill('Réunion tendue');
 await page.locator('#note-text').fill('Test de bout en bout');
 await page.waitForTimeout(2600); // au-dela du debounce de 2 s
 
@@ -263,6 +277,16 @@ const stored = await readStore('days');
 check('la journee est ecrite dans IndexedDB', stored.length === 1, `${stored.length} fiche(s)`);
 check('le texte saisi est bien enregistre', stored[0]?.modules?.note?.text === 'Test de bout en bout');
 check('le check-in est enregistre', stored[0]?.modules?.mood?.checkins?.morning?.mood === 8);
+check(
+  'la note du moment est enregistree',
+  stored[0]?.modules?.mood?.checkins?.morning?.note === 'Réunion tendue'
+);
+check(
+  "l'horodatage du check-in est affiche",
+  /Noté à \d{2}:\d{2}/.test(
+    await page.locator('[data-slot="morning"] [data-role="stamp"]').innerText()
+  )
+);
 check(
   'les valeurs non renseignees ne sont pas stockees',
   stored[0]?.modules?.mood?.checkins?.morning?.energy === undefined
@@ -305,6 +329,14 @@ check(
   (await page.locator('.quick-adds').count()) === 1
 );
 check(
+  'le module sommeil est affiche comme les autres',
+  (await page.locator('#sleep-bed').count()) === 1
+);
+check(
+  "il n'y a plus de bouton « Ajouter du detail »",
+  !(await page.locator('#main').innerText()).includes('Ajouter du détail')
+);
+check(
   'les ecrans de module sont des fichiers separes',
   await page.evaluate(() => {
     const names = performance.getEntriesByType('resource').map((r) => r.name);
@@ -327,15 +359,51 @@ check(
   `ml = ${afterWater[0]?.modules?.hydration?.ml}`
 );
 
+// Saisie libre, pour les contenants qui ne tombent pas sur un preset.
+await page.locator('#water-custom').fill('800');
+await page.locator('#water-custom').press('Enter');
+await page.waitForTimeout(2600);
+const afterCustom = await readStore('days');
+check(
+  'une quantite libre est ajoutee',
+  afterCustom[0]?.modules?.hydration?.ml === 1050,
+  `ml = ${afterCustom[0]?.modules?.hydration?.ml}`
+);
+
 // Habitudes : creation, cochage, et surtout la photographie des habitudes
 // actives ce jour-la, qui rend l'historique immuable.
+// Les suggestions doivent tolerer une faute de frappe et l'absence d'accents.
+await page.locator('#habit-new').fill('meditaton');
+await page.waitForTimeout(200);
+check(
+  'les suggestions rattrapent une faute de frappe',
+  (await page.locator('.suggestion').allInnerTexts()).some((t) => t.includes('Méditation')),
+  (await page.locator('.suggestion').allInnerTexts()).join(', ')
+);
+await page.locator('#habit-new').fill('');
+await page.waitForTimeout(200);
+check(
+  'des suggestions sont proposees sans rien taper',
+  (await page.locator('.suggestion').count()) > 0
+);
+
 await page.locator('#habit-new').fill('Marche');
-await page.locator('.add-row .btn').click();
+await page.locator('#habit-add').click();
 await page.waitForTimeout(400);
 await page.locator('#habit-new').fill('Lecture');
-await page.locator('.add-row .btn').click();
+await page.locator('#habit-add').click();
 await page.waitForTimeout(400);
-check('une habitude creee apparait', (await page.locator('.chip').count()) === 2);
+check('une activite creee apparait', (await page.locator('.chip').count()) === 2);
+
+// Un doublon avec accents differents ne doit pas creer une seconde entree.
+await page.locator('#habit-new').fill('marche');
+await page.locator('#habit-add').click();
+await page.waitForTimeout(300);
+check(
+  'un doublon sans accent ne cree pas de seconde activite',
+  (await page.locator('.chip').count()) === 2,
+  `${await page.locator('.chip').count()} chips`
+);
 
 await page.locator('.chip-toggle').first().click();
 await page.waitForTimeout(2600);
@@ -412,7 +480,55 @@ check(
   )
 );
 
-await page.locator('.topbar .icon-btn').first().click();
+// ---------------------------------------------------------------- profil
+await page.locator('#open-profile').click();
+await page.waitForSelector('#profile-name');
+await scanAccents();
+check('l ecran profil s ouvre', (await page.locator('#profile-name').count()) === 1);
+check(
+  'les reponses de la presentation y sont retrouvees',
+  await page.locator('#p-mobility-wheelchair').isChecked()
+);
+check(
+  "l'appareil connecte y est retrouve",
+  await page.locator('#p-wearable-garmin').isChecked()
+);
+check(
+  'une question sans reponse peut le rester',
+  (await page.locator('#p-cycle-__unanswered').count()) === 1
+);
+// Un identifiant HTML en double casserait l'association libelle/case.
+const dupIds = await page.evaluate(() => {
+  const seen = new Set();
+  const dups = [];
+  for (const node of document.querySelectorAll('[id]')) {
+    if (seen.has(node.id)) dups.push(node.id);
+    seen.add(node.id);
+  }
+  return dups;
+});
+check('aucun identifiant HTML en double', dupIds.length === 0, dupIds.join(', '));
+
+// Modifier le profil doit s'enregistrer sans toucher aux journees.
+await page.locator('#p-mobility-walking').check();
+await page.waitForTimeout(400);
+const afterProfile = await readStore('meta');
+check(
+  'une modification du profil est enregistree',
+  afterProfile.find((m) => m.key === 'capabilities')?.value?.mobility === 'walking'
+);
+check(
+  'les journees ne sont pas touchees par le profil',
+  (await readStore('days')).length === 1
+);
+check(
+  'la remise a zero est presente et signalee comme definitive',
+  (await page.locator('.btn-danger').innerText()).includes('Effacer')
+);
+
+await page.locator('.topbar .icon-btn').first().click(); // retour aux donnees
+await page.waitForSelector('.facts');
+await page.locator('.topbar .icon-btn').first().click(); // retour a la journee
 await page.waitForSelector('[data-slot]');
 check('on revient a sa journee', (await page.locator('[data-slot]').count()) === 3);
 

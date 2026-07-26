@@ -52,6 +52,41 @@ export async function render({ store }) {
     draw();
   }
 
+  /** Champ de saisie libre, en millilitres. */
+  function customRow() {
+    const input = el('input', {
+      type: 'number',
+      id: 'water-custom',
+      class: 'input',
+      inputmode: 'numeric',
+      min: '1',
+      max: '5000',
+      step: '10',
+      placeholder: 'ex. 800',
+      onKeydown: (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submit();
+        }
+      },
+    });
+
+    function submit() {
+      const amount = Number(input.value);
+      if (!Number.isFinite(amount) || amount <= 0) return;
+      addMl(Math.min(amount, 5000));
+    }
+
+    return el('div', { class: 'field', style: { marginTop: '0.75rem' } }, [
+      el('label', { class: 'field-label', for: 'water-custom' }, 'Autre quantité'),
+      el('div', { class: 'add-row' }, [
+        input,
+        el('span', { class: 'input-unit' }, 'ml'),
+        el('button', { type: 'button', id: 'water-add', class: 'btn', onClick: submit }, 'Ajouter'),
+      ]),
+    ]);
+  }
+
   function draw() {
     const ml = data().ml;
     const tgt = target();
@@ -104,6 +139,11 @@ export async function render({ store }) {
           ])
         )
       ),
+
+      // Saisie libre : les gourdes font 600, 800, 1 100 ml selon les modeles, et
+      // multiplier les boutons predefinis pour couvrir tout le monde
+      // encombrerait l'ecran sans jamais y arriver.
+      customRow(),
 
       el('div', { class: 'card-actions' }, [
         known &&

@@ -152,9 +152,9 @@ saisie puisse devenir du balisage.
 
 | Commande | Ce qu'elle couvre |
 |---|---|
-| `npm test` | 61 tests unitaires |
+| `npm test` | 73 tests unitaires |
 | `npm run test:timezones` | la suite complète dans 10 fuseaux |
-| `npm run smoke` | 67 vérifications dans un vrai navigateur |
+| `npm run smoke` | 83 vérifications dans un vrai navigateur |
 | `npm run verify` | tout l'enchaînement |
 
 Le test de bout en bout intercepte **toutes** les requêtes réseau et échoue s'il
@@ -279,3 +279,60 @@ tout le reste : l'export, la restauration, et l'accès à l'historique complet.
 L'export sélectif s'appuie sur le drapeau `shareable` du registre : montrer
 trois mois de nutrition à une diététicienne n'expose ni le journal, ni les
 check-ins d'humeur, ni le profil.
+
+## Décision 14 — Les questions du profil vivent à un seul endroit
+
+Les listes d'options (mobilité, cycle, appareil connecté) et les contrôles de
+choix sont partagés entre la première ouverture et l'écran de profil, dans
+`src/modules/profile-options.js` et `src/ui/controls.js`.
+
+Dupliqués, on finirait par en corriger une version et pas l'autre : quelqu'un
+qui revient sur son profil ne retrouverait pas exactement la question à
+laquelle il a répondu. Sur des sujets aussi personnels que le cycle ou la
+mobilité, cette incohérence ne serait pas anodine.
+
+Corollaire ajouté au passage : chaque question du profil accepte « Je préfère
+ne pas répondre ». Une question passée à la première ouverture doit pouvoir le
+rester quand on revient dessus — un choix fait un jour ne doit pas devenir une
+prison.
+
+Un bug trouvé en écrivant le test de cet écran : l'option « Je préfère ne pas
+répondre » et l'option « Non, pas concerné » du cycle produisaient le **même
+identifiant HTML**. Un `id` en double casse l'association entre le libellé et
+la case, donc le clic sur le texte et l'annonce par les lecteurs d'écran. La
+vérification contrôle désormais qu'aucun identifiant n'est dupliqué dans la
+page.
+
+## Décision 15 — Deux paliers d'alerte pour la sauvegarde, jamais plus
+
+Le rappel monte en ambre après le délai réglé, puis en rouge au double de ce
+délai — avec un plancher à 45 jours pour que quelqu'un ayant réglé un rappel
+très court ne voie pas du rouge au bout de deux semaines.
+
+Deux paliers, parce qu'un rappel d'intensité constante finit par se fondre dans
+le décor. Mais pas trois : au-delà on fabrique de l'anxiété, et le but est de
+protéger des données, pas de stresser quelqu'un tous les matins.
+
+La pastille se pose sur l'engrenage et non seulement dans un bandeau : un
+bandeau se lit une fois puis disparaît de l'attention, la pastille reste. Le
+libellé accessible du bouton porte l'information, pas seulement la couleur.
+
+## Décision 16 — Les suggestions plutôt qu'une liste imposée
+
+Une liste fermée d'habitudes oblige à ranger sa vie dans les cases de quelqu'un
+d'autre. Mais la page blanche a un coût réel : on ne sait pas quoi mettre, et
+surtout on écrit « sport » lundi, « Sport » mardi, « muscu » jeudi — et
+l'historique se retrouve avec trois entrées là où il n'y a qu'une activité.
+
+Les suggestions font converger l'écriture sans jamais l'imposer : trois niveaux
+de correspondance (début du mot, contenu, puis ressemblance à une ou deux
+fautes près), accents et casse ignorés. Ce qu'on tape reste toujours accepté
+tel quel.
+
+La comparaison de doublon ignore elle aussi les accents : « Meditation » et
+« Méditation » ne peuvent plus coexister comme deux activités distinctes.
+
+La catégorie est enregistrée quand l'activité vient d'une suggestion, et reste
+vide sinon. Elle ne sert à rien aujourd'hui ; elle permettra plus tard de dire
+« tu as pris trois moments pour toi cette semaine » sans jamais avoir demandé à
+personne de classer ses activités à la main.

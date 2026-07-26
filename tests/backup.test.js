@@ -242,3 +242,46 @@ test('a horodatage egal, la version locale est conservee', async () => {
   const day = await db.getDay('2026-07-25');
   assert.equal(day.modules.note.text, 'version locale');
 });
+
+test("l'urgence de sauvegarde monte en deux paliers, jamais plus", async () => {
+  const { backupUrgency } = await import('../src/core/backup.js');
+  const now = new Date(2026, 6, 26);
+  const days = (n) => new Date(2026, 6, 26 - n).toISOString();
+
+  // Personne qui vient d'arriver : rien a perdre, donc rien a signaler.
+  assert.equal(backupUrgency({ lastBackupAt: null }, { totalDays: 3, now }), null);
+
+  // Sauvegarde recente : rien non plus.
+  assert.equal(
+    backupUrgency({ backupReminderDays: 21, lastBackupAt: days(5) }, { totalDays: 100, now }),
+    null
+  );
+
+  // Passe le seuil : palier ambre.
+  assert.equal(
+    backupUrgency({ backupReminderDays: 21, lastBackupAt: days(25) }, { totalDays: 100, now }),
+    'due'
+  );
+
+  // Bien au-dela : palier rouge.
+  assert.equal(
+    backupUrgency({ backupReminderDays: 21, lastBackupAt: days(60) }, { totalDays: 100, now }),
+    'overdue'
+  );
+
+  // Un rappel regle tres court ne doit pas faire virer au rouge en deux
+  // semaines : le palier critique a un plancher a 45 jours.
+  assert.equal(
+    backupUrgency({ backupReminderDays: 3, lastBackupAt: days(20) }, { totalDays: 100, now }),
+    'due',
+    'ambre, pas rouge'
+  );
+  assert.equal(
+    backupUrgency({ backupReminderDays: 3, lastBackupAt: days(50) }, { totalDays: 100, now }),
+    'overdue'
+  );
+
+  // Jamais sauvegarde, avec un historique consequent.
+  assert.equal(backupUrgency({ lastBackupAt: null }, { totalDays: 20, now }), 'due');
+  assert.equal(backupUrgency({ lastBackupAt: null }, { totalDays: 90, now }), 'overdue');
+});

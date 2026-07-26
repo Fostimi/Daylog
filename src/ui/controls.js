@@ -214,3 +214,67 @@ export function timeField({ id, label, value = '', onInput }) {
     },
   };
 }
+
+/**
+ * Une ligne de choix (case a cocher ou bouton radio).
+ *
+ * Controle natif enveloppe dans un `label` : toute la ligne devient cliquable,
+ * le clavier fonctionne sans une ligne de code, et les lecteurs d'ecran
+ * annoncent l'etat sans qu'on ait a le declarer.
+ *
+ * Partage entre la premiere ouverture et l'ecran de profil : les memes questions
+ * doivent se presenter exactement de la meme facon aux deux endroits, sinon on
+ * finit par en corriger une et pas l'autre.
+ */
+export function optionRow({ type, name, id, label, hint, checked, disabled, onChange }) {
+  const input = el('input', {
+    type,
+    name,
+    id,
+    class: 'onb-input',
+    disabled,
+    onChange: (e) => onChange?.(e.target.checked),
+  });
+  input.checked = Boolean(checked);
+
+  return el('label', { class: 'onb-option', for: id }, [
+    input,
+    el('span', { class: 'onb-option-text' }, [
+      el('span', { class: 'onb-option-label' }, label),
+      hint && el('span', { class: 'onb-option-hint' }, hint),
+    ]),
+  ]);
+}
+
+/**
+ * Groupe de choix exclusifs.
+ *
+ * `allowNone` ajoute une option « Je préfère ne pas répondre » : une question
+ * passee a la premiere ouverture doit pouvoir le rester quand on revient
+ * dessus, sans qu'on soit force de choisir pour sortir de l'ecran.
+ */
+export function choice({ legend, name, options, value, onSelect, allowNone = false }) {
+  // `__unanswered` plutot que la chaine vide : plusieurs listes contiennent
+  // deja une option « none » (« Non, pas concerné » pour le cycle, « Non,
+  // aucun » pour la montre). Les deux produiraient le meme `id` HTML, et un id
+  // en double casse l'association entre le libelle et la case -- donc le clic
+  // sur le texte, et l'annonce par les lecteurs d'ecran.
+  const all = allowNone
+    ? [...options, { id: '__unanswered', label: 'Je préfère ne pas répondre' }]
+    : options;
+
+  return el('fieldset', { class: 'onb-fieldset' }, [
+    el('legend', { class: 'onb-legend' }, legend),
+    ...all.map((opt) =>
+      optionRow({
+        type: 'radio',
+        name,
+        id: `${name}-${opt.id}`,
+        label: opt.label,
+        hint: opt.hint,
+        checked: opt.id === '__unanswered' ? value === null || value === undefined : value === opt.id,
+        onChange: (on) => on && onSelect(opt.id === '__unanswered' ? null : opt.id),
+      })
+    ),
+  ]);
+}

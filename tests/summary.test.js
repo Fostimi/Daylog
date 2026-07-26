@@ -125,8 +125,12 @@ test('un module qui exige une capacite reste masque sans elle', () => {
 });
 
 test('le mode express ne retient que les modules marques', () => {
+  // Le sommeil a quitte le bloc express : il etait cache derriere un bouton
+  // « Ajouter du detail », ce qui n'avait pas de sens pour un suivi a part
+  // entiere. Il s'affiche desormais comme une carte, au meme titre que les
+  // habitudes ou l'hydratation.
   const ids = expressModules({}, {}).map((m) => m.id);
-  assert.deepEqual(ids, ['mood', 'sleep', 'note'], 'humeur, sommeil, un mot');
+  assert.deepEqual(ids, ['mood', 'note'], 'les check-ins et le mot du jour');
 });
 
 test('le journal intime ne figure jamais dans un partage', () => {

@@ -58,8 +58,10 @@ export function registerCoreModules() {
     label: 'Sommeil',
     icon: 'sleep',
     defaultEnabled: true,
-    express: true,
     order: 20,
+    // Le sommeil etait cache derriere un bouton « Ajouter du detail ». Ce n'est
+    // pas un detail de l'humeur : c'est un suivi a part entiere.
+    view: () => import('./views/sleep.js'),
     summarize(data) {
       return {
         sleepH: typeof data?.hours === 'number' ? round(data.hours, 2) : null,
@@ -71,7 +73,7 @@ export function registerCoreModules() {
   // ------------------------------------------------------------ habitudes
   registerModule({
     id: 'habits',
-    label: 'Habitudes',
+    label: 'Ce que tu as fait',
     icon: 'habits',
     defaultEnabled: true,
     order: 30,
