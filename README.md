@@ -5,7 +5,23 @@ Suivi quotidien — humeur, sommeil, habitudes, alimentation.
 
 État : socle en cours de construction. Utilisable, mais loin d'être complet.
 
-![Aperçu de l'écran du jour](docs/apercu-light.png)
+<p>
+  <img src="docs/apercu-light.png" alt="L'écran du jour, thème clair" width="260">
+  <img src="docs/donnees.png" alt="L'écran Mes données" width="260">
+</p>
+
+## Où ça en est
+
+| | |
+|---|---|
+| ✅ | Socle : stockage local, sauvegarde automatique, schéma versionné |
+| ✅ | Première ouverture : modules choisis par questions, pas par cases |
+| ✅ | Écran du jour : trois check-ins, sommeil, journal |
+| ✅ | Habitudes et hydratation |
+| ✅ | Sauvegarde, restauration, partage sélectif |
+| ⬜ | Bilan et graphiques |
+| ⬜ | Activité physique, santé et traitements, argent, apprentissage |
+| ⬜ | Verrouillage par code, notifications, installation depuis les stores |
 
 ## Ce que c'est
 
