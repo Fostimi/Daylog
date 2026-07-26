@@ -1,20 +1,29 @@
-# Publie l'application sur GitHub Pages a chaque push.
+# Verifie l'application a chaque push, puis la publie sur GitHub Pages.
+#
+# Les jobs sont separes a dessein :
+#
+#   verifier / construire -> la sante du code. Ces jobs DOIVENT rester verts.
+#   deployer              -> la publication. Il echoue tant que GitHub Pages
+#                            n'a pas ete active, ce qui n'a rien a voir avec la
+#                            qualite du code.
+#
+# ACTIVATION, UNE SEULE FOIS :
+#   Depot -> Settings -> Pages -> Source : « GitHub Actions »
+#
+# L'activation automatique (`enablement: true`) a ete tentee puis retiree : le
+# jeton fourni aux workflows n'a pas le droit de creer un site Pages, et l'appel
+# echouait avec un message trompeur.
 #
 # Une fois active, l'adresse est https://fostimi.github.io/Daylog/ et se met a
-# jour toute seule, environ une minute apres chaque modification.
-#
-# Rien a configurer a la main : `enablement: true` active Pages au premier
-# passage. Le depot doit etre public, ou le compte doit avoir un abonnement
-# payant -- GitHub Pages ne publie pas un depot prive sur un compte gratuit.
+# jour environ une minute apres chaque push.
 
-name: Deploiement
+name: Verification et deploiement
 
 on:
   push:
     branches: ['**']
   workflow_dispatch:
 
-# Un seul deploiement a la fois ; on ne coupe pas celui en cours.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -26,6 +35,7 @@ permissions:
 
 jobs:
   verifier:
+    name: Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -40,6 +50,7 @@ jobs:
         run: npm run test:timezones
 
   construire:
+    name: Construction et verification de bout en bout
     needs: verifier
     runs-on: ubuntu-latest
     steps:
@@ -51,29 +62,26 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      # Verification de bout en bout dans un vrai navigateur, y compris le
-      # controle qu'aucune requete ne sort de l'application. Si une dependance
-      # introduisait un appel reseau, le deploiement echouerait ici.
+      # Verification dans un vrai navigateur, y compris le controle qu'aucune
+      # requete ne sort de l'application. Si une dependance introduisait un
+      # appel reseau, la construction echouerait ici.
       - name: Installer le navigateur de test
         run: npx playwright install --with-deps chromium
       - name: Verification de bout en bout
         run: npm run smoke
 
-      # `enablement: true` active Pages tout seul au premier deploiement :
-      # sans lui, l'action echoue tant que personne n'a coche l'option a la main.
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deployer:
+    name: Publication (necessite Pages active)
     needs: construire
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/configure-pages@v5
       - id: deployment
         uses: actions/deploy-pages@v4

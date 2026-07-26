@@ -11,26 +11,25 @@ l'ouvre sur son téléphone et on l'ajoute à l'écran d'accueil : elle se compo
 alors comme une vraie application, y compris sans connexion.
 
 Le fichier [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) est
-déjà en place. Il ne reste qu'à activer Pages :
+déjà en place et le dépôt est public. Il reste **un seul geste, une seule
+fois** :
 
 > **Dépôt → Settings → Pages → Source : « GitHub Actions »**
 
-L'adresse devient `https://fostimi.github.io/Daylog/`, disponible une minute
-après.
+L'adresse devient `https://fostimi.github.io/Daylog/`, disponible environ une
+minute après le push suivant, et se met à jour toute seule ensuite.
 
-### La condition
+### Pourquoi ce geste ne peut pas être automatisé
 
-**GitHub Pages ne fonctionne sur un dépôt privé qu'avec un compte payant**
-(Pro, Team ou Enterprise). Le dépôt Daylog est actuellement privé, et sur un
-compte gratuit Pages n'accepte que les dépôts publics.
+L'activation automatique a été tentée (`enablement: true`) puis retirée : le
+jeton fourni aux workflows GitHub n'a pas le droit de *créer* un site Pages, et
+l'appel échouait avec un message trompeur. C'est une limite volontaire de
+GitHub — activer la publication d'un site est une décision qui doit venir d'une
+personne, pas d'un script.
 
-Deux issues :
-
-- **Rendre le dépôt public.** C'est de toute façon prévu à terme : le code
-  ouvert est le seul moyen de *prouver* qu'aucune donnée ne sort. Le dépôt ne
-  contient que du code et de la documentation, aucune donnée personnelle.
-  L'inconvénient est que le projet devient visible avant d'être présentable.
-- **Garder le dépôt privé** et passer par l'option 2.
+Tant que Pages n'est pas activé, seul le job « Publication » échoue. Les tests
+et la construction, eux, restent verts : la santé du code et la configuration
+du déploiement sont deux choses distinctes.
 
 ---
 

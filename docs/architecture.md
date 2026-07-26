@@ -152,9 +152,9 @@ saisie puisse devenir du balisage.
 
 | Commande | Ce qu'elle couvre |
 |---|---|
-| `npm test` | 60 tests unitaires |
+| `npm test` | 61 tests unitaires |
 | `npm run test:timezones` | la suite complète dans 10 fuseaux |
-| `npm run smoke` | 43 vérifications dans un vrai navigateur |
+| `npm run smoke` | 54 vérifications dans un vrai navigateur |
 | `npm run verify` | tout l'enchaînement |
 
 Le test de bout en bout intercepte **toutes** les requêtes réseau et échoue s'il
@@ -225,3 +225,39 @@ La vérification de bout en bout inspecte le texte **réellement rendu** à chaq
 écran et signale les formes fautives courantes. C'est un test qui a déjà servi :
 la première version de l'onboarding avait été écrite sans accents, et rien
 d'autre ne l'aurait signalé automatiquement.
+
+## Décision 11 — Chaque module apporte son propre écran, chargé à la demande
+
+Le registre ne déclarait au départ que des données (identifiant, libellé,
+fonction de résumé). Il déclare désormais aussi un écran :
+
+```js
+view: () => import('./views/habits.js'),
+```
+
+L'écran du jour parcourt les modules actifs et télécharge leur écran **au
+moment de l'afficher**. Conséquence directe : un module désactivé ne coûte
+rien — ni en poids téléchargé, ni en temps de démarrage.
+
+Quelqu'un qui ne note que son humeur charge une fraction de ce que charge
+quelqu'un qui suit tout. C'est ce qui permet d'ajouter des suivis sans jamais
+alourdir l'application pour ceux qui ne s'en servent pas, et c'est mesurable :
+habitudes et hydratation forment deux fichiers de 1,4 Ko et 0,9 Ko compressés,
+séparés du reste.
+
+Un module dont le chargement échoue est ignoré sans empêcher les autres de
+fonctionner.
+
+## Décision 12 — À horodatage égal, la version locale gagne
+
+Trouvé en rejouant les tests plusieurs fois de suite : la fusion de sauvegarde
+comparait les dates de modification avec `>=`. Deux écritures dans la même
+milliseconde sont indiscernables, et l'égalité profitait donc à la sauvegarde
+**importée**.
+
+Pour une fusion dont le rôle est de ne jamais faire disparaître une saisie
+récente, c'est le mauvais sens. La comparaison est désormais stricte : en cas
+d'égalité, on conserve ce qui est déjà sur l'appareil.
+
+Le symptôme initial ressemblait à un test instable. C'en était un — mais
+l'instabilité révélait une vraie règle métier mal posée, pas un aléa de mesure.

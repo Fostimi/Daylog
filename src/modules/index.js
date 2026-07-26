@@ -75,6 +75,9 @@ export function registerCoreModules() {
     icon: 'habits',
     defaultEnabled: true,
     order: 30,
+    // L'ecran du module n'est telecharge que si le module est actif. Un module
+    // desactive ne coute donc rien, ni en poids ni en temps de demarrage.
+    view: () => import('./views/habits.js'),
     summarize(data) {
       const done = data?.done?.length || 0;
       // `active` est la photographie des habitudes existant CE JOUR-LA. Sans
@@ -97,6 +100,7 @@ export function registerCoreModules() {
     defaultEnabled: true,
     express: false,
     order: 40,
+    view: () => import('./views/hydration.js'),
     summarize(data) {
       return { waterMl: typeof data?.ml === 'number' && data.ml > 0 ? data.ml : null };
     },

@@ -13,6 +13,7 @@
 import { el, mount, announce } from './dom.js';
 import { scale, textarea, numberField, timeField } from './controls.js';
 import { CHECKIN_SLOTS, createCheckin } from '../modules/index.js';
+import { enabledModules } from '../core/modules.js';
 import { formatDayLong, formatTime } from '../core/i18n.js';
 import { toDate, today, addDays, isFuture } from '../core/date.js';
 
@@ -241,6 +242,11 @@ export function createExpressView({ store, root }) {
       },
     }, detailOpen ? 'Masquer le détail' : 'Ajouter du détail');
 
+    // Emplacement des modules actifs. Ils sont ajoutes apres coup, une fois leur
+    // ecran telecharge, pour que la saisie du jour soit utilisable
+    // immediatement sans attendre quoi que ce soit.
+    const modulesSlot = el('div', { dataset: { role: 'modules' } });
+
     mount(root, [
       el('a', { class: 'skip-link', href: '#main' }, 'Aller au contenu'),
       header,
@@ -253,6 +259,7 @@ export function createExpressView({ store, root }) {
         renderNote(),
         detailOpen && renderDetail(),
         detailBtn,
+        modulesSlot,
         el('p', { class: 'footer-note' }, [
           saveState,
           el('br'),
@@ -275,6 +282,36 @@ export function createExpressView({ store, root }) {
         section.classList.add('is-current');
         const name = section.querySelector('.checkin-name');
         if (name) name.appendChild(el('span', { class: 'checkin-now' }, 'maintenant'));
+      }
+    }
+
+    renderModules(modulesSlot);
+  }
+
+  /**
+   * Affiche les modules actifs sous la saisie du jour.
+   *
+   * Chaque ecran de module est telecharge a la demande : un module desactive ne
+   * coute rien du tout. C'est ce qui permet a l'application de rester legere
+   * quel que soit le nombre de suivis disponibles -- quelqu'un qui ne note que
+   * son humeur charge une fraction de ce que charge quelqu'un qui suit tout.
+   *
+   * Un module qui echoue a se charger n'empeche jamais le reste de fonctionner.
+   */
+  async function renderModules(slot) {
+    const active = enabledModules(store.getModuleState(), store.getCapabilities()).filter(
+      (m) => typeof m.view === 'function'
+    );
+
+    for (const mod of active) {
+      try {
+        const { render: renderView } = await mod.view();
+        const node = await renderView({ store });
+        // L'ecran a pu changer pendant le telechargement (changement de jour) :
+        // on n'insere que si l'emplacement est toujours dans la page.
+        if (slot.isConnected) slot.appendChild(node);
+      } catch (error) {
+        console.error(`[daylog] module ${mod.id}`, error);
       }
     }
   }

@@ -98,10 +98,17 @@ test('la fusion garde la version la plus recente de chaque journee', async () =>
   await store.flush();
 
   const result = await restoreBackup(backup, { strategy: 'merge' });
-  assert.equal(result.keptLocal, 1, 'la version locale plus recente est conservee');
 
+  // Ce qui compte est le resultat sur les donnees, pas le compteur : les deux
+  // journees sont conservees en local, l'une parce qu'elle est plus recente,
+  // l'autre par egalite d'horodatage (elle vient de la meme sauvegarde).
   const day = await db.getDay('2026-07-25');
   assert.equal(day.modules.sleep.hours, 8.5, "la saisie recente n'a pas ete ecrasee");
+  assert.equal(result.keptLocal, 2);
+  assert.equal(await db.countDays(), 2, 'aucune journee perdue au passage');
+
+  const other = await db.getDay('2026-07-24');
+  assert.equal(other.modules.note.text, 'journal intime', "l'autre journee est intacte");
 });
 
 test('la fusion ajoute les journees absentes en local', async () => {
@@ -199,4 +206,39 @@ test('le rappel de sauvegarde ne harcele pas les nouveaux venus', () => {
     true,
     'sauvegarde il y a presque deux mois : on previent'
   );
+});
+
+test('a horodatage egal, la version locale est conservee', async () => {
+  // Deux ecritures dans la meme milliseconde sont indiscernables. Le depart
+  // doit alors profiter a ce qui est deja sur l'appareil : une fusion ne doit
+  // jamais faire disparaitre une saisie recente.
+  const sameInstant = '2026-07-25T10:00:00.000Z';
+
+  await db.restoreAll({
+    days: [
+      {
+        date: '2026-07-25',
+        updatedAt: sameInstant,
+        modules: { note: { text: 'version locale' } },
+      },
+    ],
+  });
+
+  const incoming = {
+    format: FORMAT,
+    schemaVersion: SCHEMA_VERSION,
+    days: [
+      {
+        date: '2026-07-25',
+        updatedAt: sameInstant,
+        modules: { note: { text: 'version importee' } },
+      },
+    ],
+    summaries: [],
+  };
+
+  const result = await restoreBackup(incoming, { strategy: 'merge' });
+  assert.equal(result.keptLocal, 1);
+  const day = await db.getDay('2026-07-25');
+  assert.equal(day.modules.note.text, 'version locale');
 });

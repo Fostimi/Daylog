@@ -709,3 +709,169 @@ body {
 .onb-skip:hover {
   color: var(--accent);
 }
+
+/* ------------------------------------------------------------------ modules */
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.card-head > * {
+  min-width: 0;
+}
+.card-head .card-title {
+  margin-bottom: 0;
+}
+
+.card-count {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+}
+
+.btn-sm {
+  min-height: 2.25rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+/* ------------------------------------------------------------------ habitudes */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border-strong);
+  border-radius: 1.5rem;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.chip.is-done {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.chip-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: var(--tap);
+  padding: 0.5rem 0.375rem 0.5rem 0.875rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.chip.is-done .chip-toggle {
+  color: var(--accent-text);
+  font-weight: 550;
+}
+
+/* La coche double l'information de couleur, qui n'est pas percue par tout le
+   monde. `aria-pressed` porte l'etat pour les lecteurs d'ecran. */
+.chip-mark {
+  display: inline-block;
+  width: 0.875rem;
+  font-weight: 700;
+}
+
+.chip-remove {
+  min-width: 2rem;
+  padding: 0 0.5rem;
+  font-family: inherit;
+  font-size: 1.0625rem;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--border);
+  cursor: pointer;
+}
+.chip-remove:hover {
+  color: var(--danger);
+  background: var(--surface);
+}
+
+.add-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.add-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ hydratation */
+
+.meter {
+  height: 0.625rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1rem;
+  transition: width 0.3s ease;
+}
+.meter-fill.is-reached {
+  background: var(--ok);
+}
+
+.quick-adds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+  gap: 0.375rem;
+  margin-top: 0.875rem;
+}
+
+.quick-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 0.25rem;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.quick-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.quick-add-label {
+  font-size: 0.8125rem;
+  font-weight: 550;
+}
+.quick-add-hint {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+.quick-add:hover .quick-add-hint {
+  color: inherit;
+}

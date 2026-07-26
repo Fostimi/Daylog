@@ -158,6 +158,8 @@ check(
 
 // On selectionne quelques reponses au passage pour verifier leur enregistrement.
 await page.locator('#theme-sleep').check();
+await page.locator('#theme-habits').check();
+await page.locator('#theme-food').check();
 await page.locator('.onb-actions .btn-primary').click(); // -> mobilite
 await scanAccents();
 await page.locator('#mobility-wheelchair').check();
@@ -188,7 +190,7 @@ check(
 const meta = await readStore('meta');
 const byKey = Object.fromEntries(meta.map((m) => [m.key, m.value]));
 check('les modules choisis sont enregistres', byKey.modules?.sleep === true);
-check('les modules non choisis sont desactives', byKey.modules?.habits === false);
+check('les modules choisis sont tous enregistres', byKey.modules?.habits === true && byKey.modules?.hydration === true);
 check('la mobilite declaree est enregistree', byKey.capabilities?.mobility === 'wheelchair');
 check("l'appareil connecte est enregistre", byKey.capabilities?.wearable === 'garmin');
 check(
@@ -289,6 +291,80 @@ check(
     .evaluate((n) => n.classList.contains('is-selected'))
 );
 
+// ══════════════════════════════════════════════════ modules actifs
+
+// Les ecrans de module sont telecharges a la demande : on attend leur arrivee.
+await page.waitForSelector('.chips, .add-row', { timeout: 5000 }).catch(() => {});
+
+check(
+  'le module habitudes est affiche',
+  (await page.locator('#habit-new').count()) === 1
+);
+check(
+  'le module hydratation est affiche',
+  (await page.locator('.quick-adds').count()) === 1
+);
+check(
+  'les ecrans de module sont des fichiers separes',
+  await page.evaluate(() => {
+    const names = performance.getEntriesByType('resource').map((r) => r.name);
+    return names.some((n) => n.includes('habits')) && names.some((n) => n.includes('hydration'));
+  })
+);
+
+// Hydratation : un ajout rapide doit s'enregistrer, et zero doit rester
+// distinct de "non renseigne".
+check(
+  "l'hydratation part non renseignee",
+  (await page.locator('.card-count').last().textContent()).includes('Non renseigné')
+);
+await page.locator('.quick-add').nth(1).click(); // un verre : 250 ml
+await page.waitForTimeout(2600);
+const afterWater = await readStore('days');
+check(
+  'un ajout rapide est enregistre',
+  afterWater[0]?.modules?.hydration?.ml === 250,
+  `ml = ${afterWater[0]?.modules?.hydration?.ml}`
+);
+
+// Habitudes : creation, cochage, et surtout la photographie des habitudes
+// actives ce jour-la, qui rend l'historique immuable.
+await page.locator('#habit-new').fill('Marche');
+await page.locator('.add-row .btn').click();
+await page.waitForTimeout(400);
+await page.locator('#habit-new').fill('Lecture');
+await page.locator('.add-row .btn').click();
+await page.waitForTimeout(400);
+check('une habitude creee apparait', (await page.locator('.chip').count()) === 2);
+
+await page.locator('.chip-toggle').first().click();
+await page.waitForTimeout(2600);
+const afterHabits = await readStore('days');
+const habitData = afterHabits[0]?.modules?.habits;
+check('cocher une habitude est enregistre', habitData?.done?.length === 1);
+check(
+  'la photographie des habitudes du jour est enregistree',
+  habitData?.active?.length === 2,
+  `active = ${habitData?.active?.length}`
+);
+check(
+  'les habitudes sont reliees par identifiant, pas par libelle',
+  /^hab_[a-z0-9]{10}$/.test(habitData?.done?.[0] || ''),
+  habitData?.done?.[0]
+);
+
+// Archiver une habitude ne doit pas toucher aux journees deja enregistrees.
+const beforeArchive = JSON.stringify((await readStore('summaries'))[0]);
+await page.locator('.chip-remove').last().click();
+await page.waitForTimeout(2600);
+const remaining = await page.locator('.chip').count();
+check('archiver une habitude la retire de la saisie', remaining === 1);
+const afterArchive = await readStore('days');
+check(
+  "l'habitude cochee reste cochee apres archivage de l'autre",
+  afterArchive[0]?.modules?.habits?.done?.length === 1
+);
+
 // ══════════════════════════════════════════════════ vie privee
 
 check('aucune requete vers l exterieur', external.length === 0, external.join(', '));
@@ -313,6 +389,10 @@ check('le groupe a un libelle accessible', a11y.labelled);
 check('un seul arret de tabulation par groupe', a11y.oneTabStop);
 check('le lien d evitement existe', a11y.skipLink);
 
+// Rechargement avant le controle du clavier : apres une serie de clics, le
+// navigateur reprend la tabulation depuis le dernier element active, ce qui
+// testerait la sequence du test plutot que celle de la page.
+await page.reload({ waitUntil: 'networkidle' });
 await page.keyboard.press('Tab');
 const firstFocus = await page.evaluate(() => document.activeElement?.className || '');
 check('le premier Tab atteint le lien d evitement', firstFocus.includes('skip-link'), firstFocus);

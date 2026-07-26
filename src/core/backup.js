@@ -173,7 +173,11 @@ export async function restoreBackup(backup, { strategy = 'merge' } = {}) {
 
   for (const incoming of backup.days) {
     const current = byDate.get(incoming.date);
-    if (!current || (incoming.updatedAt || '') >= (current.updatedAt || '')) {
+    // Comparaison STRICTE : a horodatage egal, c'est la version locale qui
+    // gagne. Deux ecritures dans la meme milliseconde sont indiscernables, et
+    // dans le doute il vaut mieux conserver ce qui est deja sur l'appareil --
+    // une fusion ne doit jamais faire disparaitre une saisie recente.
+    if (!current || (incoming.updatedAt || '') > (current.updatedAt || '')) {
       days.push(incoming);
       const s = backup.summaries?.find((x) => x.date === incoming.date);
       if (s) summaries.push(s);
