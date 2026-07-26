@@ -14,8 +14,7 @@
     "test:timezones": "node scripts/test-timezones.js",
     "smoke": "node scripts/smoke.js",
     "verify": "npm test && npm run test:timezones && npm run build && npm run smoke",
-    "icons": "node scripts/build-icons.js",
-    "prebuild": "node scripts/build-icons.js"
+    "icons": "node scripts/build-icons.js"
   },
   "devDependencies": {
     "fake-indexeddb": "^6.0.0",

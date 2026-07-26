@@ -11,7 +11,15 @@
  * pour quatre fichiers : le navigateur deja present pour les tests sait rendre
  * du SVG, on le laisse faire.
  *
- * A relancer apres toute modification du logo :  npm run icons
+ * A relancer APRES TOUTE MODIFICATION DE public/icon.svg :
+ *
+ *     npm run icons
+ *
+ * Volontairement manuel, et non accroche a `npm run build` : les PNG generes
+ * sont versionnes, et lier la construction a la presence d'un navigateur la
+ * rend fragile -- l'integration continue installe justement le sien apres avoir
+ * construit. Le garde-fou vit dans la verification de bout en bout, qui
+ * controle que chaque icone declaree par le manifeste repond reellement.
  */
 
 import { chromium } from 'playwright';
