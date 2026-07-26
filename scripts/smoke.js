@@ -365,6 +365,57 @@ check(
   afterArchive[0]?.modules?.habits?.done?.length === 1
 );
 
+// ══════════════════════════════════════════════════ donnees et reglages
+
+await page.locator('.topbar .icon-btn[aria-label="Mes données et réglages"]').click();
+await page.waitForSelector('.facts');
+await scanAccents();
+check('l ecran des donnees s ouvre', (await page.locator('.facts').count()) === 1);
+check(
+  'le nombre de journees enregistrees est affiche',
+  (await page.locator('.fact dd').first().textContent()) === '1'
+);
+check(
+  'les modules essentiels ne peuvent pas etre desactives',
+  await page.locator('#mod-mood').isDisabled()
+);
+check(
+  'le journal ne figure pas dans les extraits partageables',
+  !(await page.locator('.card', { hasText: 'Partager une partie' }).innerText()).includes('Journal')
+);
+
+// L'export doit produire un vrai fichier, sans passer par le reseau.
+const exportPromise = page.waitForEvent('download', { timeout: 10_000 });
+await page.locator('.card-actions .btn-primary').click();
+const download = await exportPromise;
+check(
+  'la sauvegarde produit un fichier compresse',
+  download.suggestedFilename().endsWith('.json.gz'),
+  download.suggestedFilename()
+);
+
+const savedPath = await download.path();
+const { readFile: rf } = await import('node:fs/promises');
+const { gunzipSync } = await import('node:zlib');
+const restored = JSON.parse(gunzipSync(await rf(savedPath)).toString());
+check('la sauvegarde contient bien les journees', restored.days.length === 1);
+check('la sauvegarde porte sa version de schema', restored.schemaVersion === 1);
+check(
+  'la sauvegarde contient le texte saisi',
+  restored.days[0].modules.note.text === 'Test de bout en bout'
+);
+
+check(
+  'la date de sauvegarde est enregistree',
+  Boolean(
+    (await readStore('meta')).find((m) => m.key === 'settings')?.value?.lastBackupAt
+  )
+);
+
+await page.locator('.topbar .icon-btn').first().click();
+await page.waitForSelector('[data-slot]');
+check('on revient a sa journee', (await page.locator('[data-slot]').count()) === 3);
+
 // ══════════════════════════════════════════════════ vie privee
 
 check('aucune requete vers l exterieur', external.length === 0, external.join(', '));

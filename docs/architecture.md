@@ -154,7 +154,7 @@ saisie puisse devenir du balisage.
 |---|---|
 | `npm test` | 61 tests unitaires |
 | `npm run test:timezones` | la suite complète dans 10 fuseaux |
-| `npm run smoke` | 54 vérifications dans un vrai navigateur |
+| `npm run smoke` | 64 vérifications dans un vrai navigateur |
 | `npm run verify` | tout l'enchaînement |
 
 Le test de bout en bout intercepte **toutes** les requêtes réseau et échoue s'il
@@ -261,3 +261,21 @@ d'égalité, on conserve ce qui est déjà sur l'appareil.
 
 Le symptôme initial ressemblait à un test instable. C'en était un — mais
 l'instabilité révélait une vraie règle métier mal posée, pas un aléa de mesure.
+
+## Décision 13 — La sauvegarde dans le cloud, sans serveur
+
+L'écran « Mes données » fabrique un fichier et le remet au **système**. C'est
+ensuite le téléphone qui l'envoie sur Drive, iCloud ou ailleurs, avec ses
+propres mécanismes.
+
+Résultat : on obtient la sauvegarde dans le cloud sans serveur, sans frais
+récurrents, et sans que l'application ait besoin de la moindre permission
+réseau. La promesse « aucune requête ne sort » reste littéralement vraie —
+et vérifiée automatiquement.
+
+Trois choses ne seront jamais payantes, parce que les faire payer contredirait
+tout le reste : l'export, la restauration, et l'accès à l'historique complet.
+
+L'export sélectif s'appuie sur le drapeau `shareable` du registre : montrer
+trois mois de nutrition à une diététicienne n'expose ni le journal, ni les
+check-ins d'humeur, ni le profil.

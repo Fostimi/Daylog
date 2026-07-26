@@ -48,7 +48,7 @@ npm run build    # version de production dans dist/
 ```bash
 npm test                  # 61 tests unitaires
 npm run test:timezones    # la suite complète dans 10 fuseaux horaires
-npm run smoke             # 54 vérifications dans un vrai navigateur
+npm run smoke             # 64 vérifications dans un vrai navigateur
 npm run verify            # tout l'enchaînement
 ```
 

@@ -16,9 +16,22 @@ import { CHECKIN_SLOTS, createCheckin } from '../modules/index.js';
 import { enabledModules } from '../core/modules.js';
 import { formatDayLong, formatTime } from '../core/i18n.js';
 import { toDate, today, addDays, isFuture } from '../core/date.js';
+import { shouldRemindBackup, daysSinceBackup } from '../core/backup.js';
+import * as db from '../core/db.js';
 
-export function createExpressView({ store, root }) {
+export function createExpressView({ store, root, onOpenSettings }) {
   let detailOpen = false;
+  let backupNeeded = false;
+
+  /** Le rappel est evalue une fois par ouverture, pas a chaque rendu. */
+  async function refreshBackupNeed() {
+    try {
+      const totalDays = await db.countDays();
+      backupNeeded = shouldRemindBackup(store.getSettings(), { totalDays });
+    } catch {
+      backupNeeded = false;
+    }
+  }
 
   function currentSlot() {
     const h = new Date().getHours();
@@ -225,6 +238,12 @@ export function createExpressView({ store, root }) {
         disabled: isFuture(addDays(date, 1)),
         onClick: () => go(1),
       }, '→'),
+      el('button', {
+        class: 'icon-btn',
+        type: 'button',
+        'aria-label': 'Mes données et réglages',
+        onClick: () => onOpenSettings?.(),
+      }, '⚙'),
     ]);
 
     const saveState = el('div', { class: 'save-state', dataset: { role: 'save-state' } }, [
@@ -251,6 +270,7 @@ export function createExpressView({ store, root }) {
       el('a', { class: 'skip-link', href: '#main' }, 'Aller au contenu'),
       header,
       el('main', { class: 'app', id: 'main' }, [
+        backupBanner(),
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title' }, 'Ta journée en bref'),
           el('p', { class: 'card-hint' }, 'Trois questions. Le détail si tu en as envie.'),
@@ -286,6 +306,33 @@ export function createExpressView({ store, root }) {
     }
 
     renderModules(modulesSlot);
+  }
+
+  /**
+   * Bandeau de rappel de sauvegarde.
+   *
+   * Un bandeau discret, jamais une fenetre modale. En local-first il n'existe
+   * aucun filet automatique : perdre son telephone, c'est tout perdre. Ce
+   * rappel est donc une vraie fonction de securite, pas une relance
+   * commerciale -- et il ne s'affiche pas avant qu'il y ait quelque chose a
+   * perdre.
+   */
+  function backupBanner() {
+    if (!backupNeeded) return null;
+    const since = daysSinceBackup(store.getSettings().lastBackupAt);
+    return el('div', { class: 'banner' }, [
+      el('p', {}, [
+        since === null
+          ? "Tu n'as jamais fait de sauvegarde. "
+          : `Dernière sauvegarde il y a ${since} jours. `,
+        'Tes notes ne sont que sur cet appareil.',
+      ]),
+      el('button', {
+        class: 'btn btn-sm',
+        type: 'button',
+        onClick: () => onOpenSettings?.(),
+      }, 'Sauvegarder'),
+    ]);
   }
 
   /**
@@ -343,5 +390,5 @@ export function createExpressView({ store, root }) {
     }
   });
 
-  return { render, go };
+  return { render, go, refreshBackupNeed };
 }

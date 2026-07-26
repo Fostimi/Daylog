@@ -35,9 +35,18 @@ async function boot() {
     // de champ. C'est ce qui rend l'absence de bouton "enregistrer" sans risque.
     store.attachLifecycle(window);
 
-    const showApp = () => {
-      const view = createExpressView({ store, root });
+    // Navigation entre les deux ecrans. L'ecran des reglages n'est telecharge
+    // qu'au moment ou on l'ouvre : la plupart des ouvertures de l'application ne
+    // le chargent jamais.
+    const showApp = async () => {
+      const view = createExpressView({ store, root, onOpenSettings: showSettings });
+      await view.refreshBackupNeed();
       view.render();
+    };
+
+    const showSettings = async () => {
+      const { createSettingsView } = await import('./ui/settings.js');
+      createSettingsView({ store, root, onBack: showApp }).render();
     };
 
     // La presentation n'est telechargee qu'a la premiere ouverture. Les

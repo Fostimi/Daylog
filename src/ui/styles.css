@@ -875,3 +875,43 @@ body {
 .quick-add:hover .quick-add-hint {
   color: inherit;
 }
+
+/* ------------------------------------------------------------------ reglages */
+
+.banner.is-error {
+  background: var(--surface-2);
+  border-color: var(--danger);
+  color: var(--text);
+}
+.banner .btn {
+  flex-shrink: 0;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.875rem;
+}
+.fact {
+  padding: 0.625rem 0.75rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+.fact dt {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.125rem;
+}
+.fact dd {
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.onb-option:has(.onb-input:disabled) {
+  opacity: 0.7;
+  cursor: default;
+}
