@@ -1,0 +1,23 @@
+{
+  "name": "daylog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Suivi quotidien local-first. Aucune donnee ne quitte l'appareil.",
+  "license": "MPL-2.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test \"tests/*.test.js\"",
+    "test:watch": "node --test --watch \"tests/*.test.js\"",
+    "test:timezones": "node scripts/test-timezones.js",
+    "smoke": "node scripts/smoke.js",
+    "verify": "npm test && npm run test:timezones && npm run build && npm run smoke"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.0.0",
+    "playwright": "^1.62.0",
+    "vite": "^5.4.0"
+  }
+}

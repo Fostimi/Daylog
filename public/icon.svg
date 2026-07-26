@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Daylog">
+  <rect width="512" height="512" rx="112" fill="#5b4bc4"/>
+  <!-- Trois points : les trois check-ins d'une journee. -->
+  <circle cx="160" cy="176" r="34" fill="#ffffff" opacity="0.95"/>
+  <circle cx="256" cy="176" r="34" fill="#ffffff" opacity="0.6"/>
+  <circle cx="352" cy="176" r="34" fill="#ffffff" opacity="0.3"/>
+  <!-- Une courbe : la journee qui prend forme. -->
+  <path d="M128 344 C 176 296, 224 376, 272 320 S 368 264, 384 300"
+        fill="none" stroke="#ffffff" stroke-width="30"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

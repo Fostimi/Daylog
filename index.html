@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      viewport-fit=cover : l'app occupe l'ecran sous les encoches.
+      Pas de maximum-scale ni user-scalable=no : bloquer le zoom est un des
+      obstacles d'accessibilite les plus repandus sur mobile.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fbfaff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#131024" media="(prefers-color-scheme: dark)" />
+    <meta
+      name="description"
+      content="Daylog - suivi quotidien. Tes donnees restent sur ton appareil."
+    />
+    <!-- Aucune ressource externe : ni police, ni script, ni analytics. -->
+    <title>Daylog</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Daylog" />
+  </head>
+  <body>
+    <div id="app">
+      <noscript>
+        <p style="padding: 1rem">
+          Daylog a besoin de JavaScript pour fonctionner. Tout s'execute sur ton appareil : aucune
+          donnee n'est envoyee.
+        </p>
+      </noscript>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

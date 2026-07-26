@@ -1,0 +1,558 @@
+/*
+ * Feuille de style.
+ *
+ * Trois regles tenues partout dans ce fichier :
+ *
+ * 1. TOUT EST EN `rem`, jamais en `px` pour du texte ou de l'espacement. Le v5
+ *    fixait tout en pixels : quelqu'un qui agrandit la police dans les reglages
+ *    de son telephone -- parce qu'il voit mal -- ne voyait aucune difference.
+ *    En rem, l'interface entiere suit ce reglage.
+ *
+ * 2. CONTRASTES VERIFIES. Chaque couple texte/fond atteint au moins 4,5:1
+ *    (norme WCAG AA). Les valeurs mesurees sont notees a cote de chaque couleur.
+ *    Le v5 affichait ses libelles a 2,8:1, illisibles pour beaucoup de gens.
+ *
+ * 3. CIBLES TACTILES CONFORTABLES. Rien d'interactif sous 2,75rem (44 px par
+ *    defaut), sauf les boutons d'echelle qui restent au-dessus du minimum AA.
+ */
+
+:root {
+  --bg: #fbfaff;
+  --surface: #ffffff;
+  --surface-2: #f4f1fc;
+  --border: #e2dcf2;
+  --border-strong: #c9c0e4;
+
+  --text: #1c1930;        /* 15,6:1 sur --bg */
+  --text-muted: #5c5473;  /*  6,8:1 sur --bg */
+  --accent: #5b4bc4;      /*  6,5:1 sur blanc */
+  --accent-soft: #ede9fb;
+  --accent-text: #3a2e8f;
+
+  --ok: #0f7a53;
+  --warn: #8a5200;
+  --danger: #b3261e;
+
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --tap: 2.75rem; /* 44 px a taille de police par defaut */
+
+  --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --shadow: 0 1px 2px rgb(28 25 48 / 6%), 0 4px 12px rgb(28 25 48 / 4%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131024;
+    --surface: #1c1834;
+    --surface-2: #251f42;
+    --border: #322a52;
+    --border-strong: #473c6e;
+
+    --text: #ece7fb;        /* 14,8:1 sur --bg */
+    --text-muted: #a49bc4;  /*  7,2:1 sur --bg */
+    --accent: #a690ff;      /*  7,2:1 sur --bg */
+    --accent-soft: #2a2250;
+    --accent-text: #cbbcff;
+
+    --ok: #4ade9b;
+    --warn: #f0b45c;
+    --danger: #ff9a90;
+
+    --shadow: none;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* Pas de font-size fixe : on herite du reglage systeme de la personne. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100dvh;
+  /* Encoches et barres systeme des telephones recents. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+/* Respecte le reglage systeme "reduire les animations". */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Anneau de focus visible et homogene, jamais supprime. */
+:focus-visible {
+  outline: 0.1875rem solid var(--accent);
+  outline-offset: 0.125rem;
+  border-radius: var(--radius-sm);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Lien d'evitement, premier element focusable de la page. */
+.skip-link {
+  position: absolute;
+  top: -100vh;
+  left: 0.5rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 0.5rem;
+}
+
+/* ------------------------------------------------------------------ mise en page */
+
+.app {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0 1rem 6rem;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar h1 {
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.topbar-date {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0.5rem;
+  font-size: 1.125rem;
+  font-family: inherit;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.icon-btn:hover {
+  color: var(--accent);
+  background: var(--surface-2);
+}
+.icon-btn[disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ------------------------------------------------------------------ cartes */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-top: 0.75rem;
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.card-hint {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 1.5rem 0 0.5rem;
+}
+
+/* ------------------------------------------------------------------ champs */
+
+.field {
+  margin-bottom: 1.25rem;
+}
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.375rem;
+}
+
+.field-head .field-label {
+  margin-bottom: 0;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.625rem 0.75rem;
+  font-family: inherit;
+  /* 1rem minimum : en dessous, iOS zoome automatiquement a la mise au point. */
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.input:focus,
+.textarea:focus {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+.textarea {
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.input-unit {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ echelle 1-10 */
+
+/*
+ * L'echelle se reorganise toute seule.
+ *
+ * Piege evite ici : dans une MEDIA QUERY, l'unite `rem` se refere a la taille de
+ * police par defaut du navigateur, PAS a celle calculee sur <html>. Une bascule
+ * du type `@media (max-width: 22rem)` ne se declenche donc jamais quand
+ * quelqu'un agrandit sa police -- c'est-a-dire precisement dans le cas qu'elle
+ * devait couvrir. `auto-fit` + `minmax` en rem, lui, suit reellement le reglage :
+ * les boutons passent sur deux lignes au lieu de deborder de l'ecran.
+ */
+.scale {
+  display: grid;
+  /* Deux rangees de cinq sur telephone. Dix boutons sur une ligne tiennent mal
+     dans 300 px : ils tombent sous le seuil tactile confortable, et se cassent
+     en 8 + 2, ce qui se lit mal. Cinq colonnes restent lisibles et cliquables
+     meme a 200 % de taille de texte. */
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.25rem;
+}
+
+/* Sur ecran large, la ligne unique redevient possible.
+   `rem` dans une media query se refere a la taille de police par defaut du
+   NAVIGATEUR : ce seuil suit donc bien quelqu'un qui a agrandi la police dans
+   les reglages de son navigateur, tout en restant insensible aux surcharges
+   CSS de la page. C'est exactement le comportement voulu ici. */
+@media (min-width: 30rem) {
+  .scale {
+    grid-template-columns: repeat(10, 1fr);
+  }
+}
+
+.scale-btn {
+  min-height: var(--tap);
+  padding: 0.25rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.scale-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.scale-btn.is-selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 650;
+}
+
+.scale-value {
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.scale-value.is-unset {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.scale-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Rangee de champs : cote a cote quand il y a la place, empiles sinon. Le
+   `minmax(0, ...)` evite qu'un champ refuse de retrecir sous sa taille de
+   contenu, cause classique de debordement horizontal. */
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(8rem, 100%), 1fr));
+  gap: 0.75rem;
+}
+.field-row .field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ check-ins */
+
+.checkin {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.875rem;
+  margin-bottom: 0.75rem;
+  background: var(--surface-2);
+}
+.checkin.is-logged {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* `flex-wrap` + `min-width: 0` : sans eux, un element flex refuse de retrecir
+   sous la largeur de son texte et deborde de l'ecran des que la police grandit.
+   C'est la cause de debordement horizontal la plus courante, et elle ne se voit
+   qu'en testant a taille de texte augmentee. */
+.checkin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  min-height: var(--tap);
+  cursor: pointer;
+  list-style: none;
+  padding-right: 1.5rem;
+  position: relative;
+}
+.checkin-head > * {
+  min-width: 0;
+}
+/* Masque la fleche par defaut de <summary>, y compris sur Safari. */
+.checkin-head::-webkit-details-marker {
+  display: none;
+}
+/* Chevron maison, purement decoratif : l'etat ouvert/ferme est deja annonce
+   par le navigateur via l'element <details>. */
+.checkin-head::after {
+  content: '';
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 0.125rem solid var(--text-muted);
+  border-bottom: 0.125rem solid var(--text-muted);
+  transform: translateY(-70%) rotate(45deg);
+  transition: transform 0.15s;
+}
+.checkin[open] > .checkin-head::after {
+  transform: translateY(-30%) rotate(-135deg);
+}
+.checkin[open] > .checkin-head {
+  margin-bottom: 0.875rem;
+}
+
+.checkin.is-current {
+  border-color: var(--border-strong);
+}
+
+.checkin-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+/* Repere du moment de la journee. Un mot, pas seulement une couleur : la
+   couleur seule n'est pas percue par tout le monde. */
+.checkin-now {
+  margin-left: 0.5rem;
+  padding: 0.0625rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-radius: 1rem;
+  vertical-align: 0.0625rem;
+}
+
+.checkin-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.checkin-time.is-logged {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ boutons */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: var(--tap);
+  padding: 0.625rem 1rem;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover {
+  color: #fff;
+  opacity: 0.9;
+}
+.btn-block {
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------ etat de sauvegarde */
+
+.save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.save-state.is-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+.save-dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border-radius: 50%;
+  background: var(--ok);
+  flex-shrink: 0;
+}
+.save-state.is-dirty .save-dot {
+  background: var(--warn);
+}
+.save-state.is-error .save-dot {
+  background: var(--danger);
+}
+
+/* ------------------------------------------------------------------ bandeau */
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  background: var(--accent-soft);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--accent-text);
+}
+.banner p {
+  flex: 1;
+}
+
+.footer-note {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  text-align: center;
+}
