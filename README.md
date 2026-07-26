@@ -5,7 +5,7 @@ Suivi quotidien — humeur, sommeil, habitudes, alimentation.
 
 État : socle en cours de construction. Utilisable, mais loin d'être complet.
 
-![Aperçu](docs/apercu-light.png)
+![Aperçu de l'écran du jour](docs/apercu-light.png)
 
 ## Ce que c'est
 
@@ -48,7 +48,8 @@ npm run build    # version de production dans dist/
 ```bash
 npm test                  # 60 tests unitaires
 npm run test:timezones    # la suite complète dans 10 fuseaux horaires
-node scripts/smoke.js     # 25 vérifications dans un vrai navigateur
+npm run smoke             # 43 vérifications dans un vrai navigateur
+npm run verify            # tout l'enchaînement
 ```
 
 Le test de bout en bout intercepte toutes les requêtes réseau et **échoue s'il

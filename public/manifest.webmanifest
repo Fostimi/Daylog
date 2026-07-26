@@ -1,7 +1,7 @@
 {
   "name": "Daylog",
   "short_name": "Daylog",
-  "description": "Ton suivi quotidien. Tes donnees restent sur ton appareil.",
+  "description": "Ton suivi quotidien. Tes données restent sur ton appareil.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

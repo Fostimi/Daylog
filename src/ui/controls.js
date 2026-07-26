@@ -63,7 +63,7 @@ export function scale({
       // Un seul bouton tabulable : on entre dans le groupe, pas dans chaque bouton.
       btn.tabIndex = selected || (current === null && v === min) ? 0 : -1;
     }
-    valueLabel.textContent = current === null ? 'Non renseigne' : String(current);
+    valueLabel.textContent = current === null ? 'Non renseigné' : String(current);
     valueLabel.classList.toggle('is-unset', current === null);
   }
 

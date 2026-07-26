@@ -23,8 +23,8 @@ async function boot() {
   try {
     await store.init();
 
-    // Premiere ouverture : on active les modules du noyau. L'onboarding
-    // affinera ce choix, mais l'app doit etre utilisable avant meme cela.
+    // Filet de securite : meme si la presentation est interrompue, l'app reste
+    // utilisable avec les modules du noyau.
     if (!Object.keys(store.getModuleState()).length) {
       await store.setModuleState(defaultModuleState());
     }
@@ -35,8 +35,20 @@ async function boot() {
     // de champ. C'est ce qui rend l'absence de bouton "enregistrer" sans risque.
     store.attachLifecycle(window);
 
-    const view = createExpressView({ store, root });
-    view.render();
+    const showApp = () => {
+      const view = createExpressView({ store, root });
+      view.render();
+    };
+
+    // La presentation n'est telechargee qu'a la premiere ouverture. Les
+    // personnes deja installees n'en paient jamais le poids : c'est tout
+    // l'interet du decoupage par module.
+    if (!store.getSettings().onboardedAt) {
+      const { createOnboarding } = await import('./ui/onboarding.js');
+      createOnboarding({ store, root, onDone: showApp }).render();
+    } else {
+      showApp();
+    }
 
     // Expose le store en developpement, pour inspecter l'etat depuis la console.
     if (import.meta.env.DEV) globalThis.daylog = { store };
@@ -45,10 +57,10 @@ async function boot() {
     mount(root, [
       el('main', { class: 'app' }, [
         el('div', { class: 'card' }, [
-          el('h2', { class: 'card-title' }, "Daylog n'a pas pu demarrer"),
+          el('h2', { class: 'card-title' }, "Daylog n'a pas pu démarrer"),
           el('p', { class: 'card-hint' }, [
-            "Le stockage local est inaccessible. C'est souvent le cas en navigation privee, ",
-            'ou si le navigateur bloque les donnees de site.',
+            "Le stockage local est inaccessible. C'est souvent le cas en navigation privée, ",
+            'ou si le navigateur bloque les données de site.',
           ]),
           el('p', { class: 'card-hint' }, String(error?.message || error)),
         ]),

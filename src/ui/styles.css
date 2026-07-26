@@ -553,3 +553,159 @@ body {
   color: var(--text-muted);
   text-align: center;
 }
+
+/* ------------------------------------------------------------------ premiere ouverture */
+
+.onb {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.onb-progress {
+  height: 0.25rem;
+  background: var(--surface-2);
+  border-radius: 1rem;
+  margin: 1rem 0 1.5rem;
+  overflow: hidden;
+}
+.onb-progress-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1rem;
+  transition: width 0.25s ease;
+}
+
+.onb-body {
+  flex: 1;
+}
+
+.onb-title {
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+/* Le titre recoit le focus au changement d'ecran, mais ce n'est pas un element
+   interactif : on n'affiche donc pas d'anneau de focus dessus. */
+.onb-title:focus {
+  outline: none;
+}
+
+.onb-intro {
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.onb-para {
+  margin-bottom: 0.875rem;
+  line-height: 1.6;
+}
+
+.onb-hint {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 1rem;
+}
+
+.onb-note {
+  background: var(--surface-2);
+  border-left: 0.1875rem solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 0.75rem 0.875rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.onb-fieldset {
+  border: 0;
+  margin-bottom: 1rem;
+}
+
+.onb-legend {
+  font-size: 0.9375rem;
+  font-weight: 550;
+  margin-bottom: 0.625rem;
+  padding: 0;
+}
+
+/* Toute la ligne est cliquable, pas seulement la petite case. */
+.onb-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-height: var(--tap);
+  padding: 0.75rem 0.875rem;
+  margin-bottom: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.onb-option:hover {
+  border-color: var(--border-strong);
+}
+.onb-option:has(.onb-input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+/* L'anneau de focus se pose sur la ligne entiere plutot que sur la case seule :
+   au clavier, on voit ce qui est selectionne. */
+.onb-option:has(.onb-input:focus-visible) {
+  outline: 0.1875rem solid var(--accent);
+  outline-offset: 0.125rem;
+}
+
+.onb-input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.onb-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.onb-option-label {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+.onb-option-hint {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.onb-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.onb-skip {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.onb-skip:hover {
+  color: var(--accent);
+}

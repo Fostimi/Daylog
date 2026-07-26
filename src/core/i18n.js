@@ -19,32 +19,32 @@
 
 const STRINGS = {
   'app.name': 'Daylog',
-  'app.tagline': 'Ton suivi, sur ton telephone, nulle part ailleurs',
+  'app.tagline': 'Ton suivi, sur ton téléphone, nulle part ailleurs',
 
   'nav.today': "Aujourd'hui",
   'nav.week': 'Semaine',
   'nav.dashboard': 'Bilan',
   'nav.history': 'Historique',
-  'nav.settings': 'Reglages',
+  'nav.settings': 'Réglages',
 
   'day.today': "Aujourd'hui",
   'day.yesterday': 'Hier',
-  'day.previous': 'Jour precedent',
+  'day.previous': 'Jour précédent',
   'day.next': 'Jour suivant',
-  'day.future': "Cette journee n'est pas encore arrivee",
+  'day.future': "Cette journée n'est pas encore arrivée",
 
-  'save.saving': 'Enregistrement...',
-  'save.saved': 'Enregistre',
-  'save.savedAt': 'Enregistre a {time}',
-  'save.error': "L'enregistrement a echoue. Tes donnees sont toujours a l'ecran.",
-  'save.auto': 'Tout est enregistre automatiquement',
+  'save.saving': 'Enregistrement…',
+  'save.saved': 'Enregistré',
+  'save.savedAt': 'Enregistré à {time}',
+  'save.error': "L'enregistrement a échoué. Tes données sont toujours à l'écran.",
+  'save.auto': 'Tout est enregistré automatiquement',
 
-  'express.title': 'Ta journee en bref',
-  'express.subtitle': 'Trois questions. Le detail si tu en as envie.',
-  'express.expand': 'Voir tout le detail',
-  'express.collapse': 'Revenir a l\'essentiel',
+  'express.title': 'Ta journée en bref',
+  'express.subtitle': 'Trois questions. Le détail si tu en as envie.',
+  'express.expand': 'Voir tout le détail',
+  'express.collapse': "Revenir à l'essentiel",
 
-  'field.unset': 'Non renseigne',
+  'field.unset': 'Non renseigné',
   'field.clear': 'Effacer',
   'field.optional': 'facultatif',
 
@@ -52,26 +52,26 @@ const STRINGS = {
   'welcome.first': 'Bienvenue',
   // Exemple de phrase ou l'accord est inevitable : elle porte donc des variantes.
   'welcome.ready': {
-    n: 'Prêt à noter ta journee ?',
-    f: 'Prête à noter ta journee ?',
-    m: 'Prêt à noter ta journee ?',
+    n: 'Prêt à noter ta journée ?',
+    f: 'Prête à noter ta journée ?',
+    m: 'Prêt à noter ta journée ?',
   },
 
-  'backup.reminder': 'Derniere sauvegarde il y a {days} jours',
+  'backup.reminder': 'Dernière sauvegarde il y a {days} jours',
   'backup.never': "Tu n'as jamais fait de sauvegarde",
   'backup.why':
-    'Tes donnees sont uniquement sur cet appareil. Si tu le perds, elles sont perdues avec lui.',
+    'Tes données sont uniquement sur cet appareil. Si tu le perds, elles sont perdues avec lui.',
   'backup.action': 'Sauvegarder maintenant',
-  'backup.done': 'Sauvegarde creee',
+  'backup.done': 'Sauvegarde créée',
   'backup.import': 'Restaurer une sauvegarde',
 
-  'privacy.title': 'Rien ne quitte ton telephone',
+  'privacy.title': 'Rien ne quitte ton téléphone',
   'privacy.body':
-    "Daylog n'envoie aucune donnee, nulle part. Pas de compte, pas de serveur, pas de publicite. " +
+    "Daylog n'envoie aucune donnée, nulle part. Pas de compte, pas de serveur, pas de publicité. " +
     "Tes notes restent sur cet appareil, et toi seul peux les exporter.",
 
   'stat.tracked': '{tracked} jours suivis sur les {window} derniers',
-  'stat.noData': 'Pas encore assez de donnees',
+  'stat.noData': 'Pas encore assez de données',
   'stat.notEnough': 'Il faut au moins {n} jours pour dire quelque chose de fiable',
 };
 
@@ -112,8 +112,8 @@ export function allKeys() {
 
 const DAY_NAMES = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const MONTH_NAMES = [
-  'janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin',
-  'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre',
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
 ];
 
 /** "mardi 26 juillet" -- sans l'annee si c'est l'annee en cours. */

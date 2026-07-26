@@ -44,7 +44,7 @@ export function createExpressView({ store, root }) {
     // d'ou l'absence de majuscule ici.
     const controls = [
       ['mood', 'Humeur', 'au plus bas', 'au top'],
-      ['energy', 'Energie', 'vide', 'plein'],
+      ['energy', 'Énergie', 'vide', 'plein'],
       ['stress', 'Stress', 'serein', 'sous pression'],
     ].map(([key, label, low, high]) =>
       scale({
@@ -88,7 +88,7 @@ export function createExpressView({ store, root }) {
               class: `checkin-time${logged ? ' is-logged' : ''}`,
               dataset: { role: 'time' },
             },
-            logged ? summaryLine(data) : 'Pas encore note'
+            logged ? summaryLine(data) : 'Pas encore noté'
           ),
         ]),
         el('div', { class: 'checkin-body' }, controls.map((c) => c.node)),
@@ -100,9 +100,9 @@ export function createExpressView({ store, root }) {
   function summaryLine(data) {
     const parts = [];
     if (data.mood !== null && data.mood !== undefined) parts.push(`humeur ${data.mood}`);
-    if (data.energy !== null && data.energy !== undefined) parts.push(`energie ${data.energy}`);
+    if (data.energy !== null && data.energy !== undefined) parts.push(`énergie ${data.energy}`);
     if (data.stress !== null && data.stress !== undefined) parts.push(`stress ${data.stress}`);
-    return parts.length ? parts.join(' · ') : `Note a ${formatTime(data.loggedAt)}`;
+    return parts.length ? parts.join(' · ') : `Noté à ${formatTime(data.loggedAt)}`;
   }
 
   function hasCurrentSlotLogged() {
@@ -117,7 +117,7 @@ export function createExpressView({ store, root }) {
     section.classList.toggle('is-logged', logged);
     const time = section.querySelector('[data-role="time"]');
     if (time) {
-      time.textContent = logged ? summaryLine(data) : 'Pas encore note';
+      time.textContent = logged ? summaryLine(data) : 'Pas encore noté';
       time.classList.toggle('is-logged', logged);
     }
   }
@@ -147,7 +147,7 @@ export function createExpressView({ store, root }) {
     });
     const hours = numberField({
       id: 'sleep-hours',
-      label: 'Duree',
+      label: 'Durée',
       value: sleep.hours,
       step: 0.25,
       min: 0,
@@ -170,10 +170,10 @@ export function createExpressView({ store, root }) {
 
     const quality = scale({
       id: 'sleep-quality',
-      label: 'Qualite du sommeil',
+      label: 'Qualité du sommeil',
       value: sleep.quality,
-      lowLabel: 'Mauvaise',
-      highLabel: 'Excellente',
+      lowLabel: 'mauvaise',
+      highLabel: 'excellente',
       onChange: (v) => store.update('sleep', { quality: v }),
     });
 
@@ -190,9 +190,9 @@ export function createExpressView({ store, root }) {
     const note = store.get('note') || {};
     const field = textarea({
       id: 'note-text',
-      label: 'Un mot sur ta journee',
+      label: 'Un mot sur ta journée',
       value: note.text || '',
-      placeholder: 'Ce que tu veux en garder...',
+      placeholder: 'Ce que tu veux en garder…',
       rows: 3,
       onInput: (value) => store.update('note', { text: value }),
     });
@@ -210,7 +210,7 @@ export function createExpressView({ store, root }) {
       el('button', {
         class: 'icon-btn',
         type: 'button',
-        'aria-label': 'Jour precedent',
+        'aria-label': 'Jour précédent',
         onClick: () => go(-1),
       }, '←'),
       el('h1', {}, [
@@ -228,7 +228,7 @@ export function createExpressView({ store, root }) {
 
     const saveState = el('div', { class: 'save-state', dataset: { role: 'save-state' } }, [
       el('span', { class: 'save-dot', 'aria-hidden': 'true' }),
-      el('span', { dataset: { role: 'save-text' } }, 'Tout est enregistre automatiquement'),
+      el('span', { dataset: { role: 'save-text' } }, 'Tout est enregistré automatiquement'),
     ]);
 
     const detailBtn = el('button', {
@@ -239,15 +239,15 @@ export function createExpressView({ store, root }) {
         detailOpen = !detailOpen;
         render();
       },
-    }, detailOpen ? 'Masquer le detail' : 'Ajouter du detail');
+    }, detailOpen ? 'Masquer le détail' : 'Ajouter du détail');
 
     mount(root, [
       el('a', { class: 'skip-link', href: '#main' }, 'Aller au contenu'),
       header,
       el('main', { class: 'app', id: 'main' }, [
         el('div', { class: 'card' }, [
-          el('h2', { class: 'card-title' }, 'Ta journee en bref'),
-          el('p', { class: 'card-hint' }, 'Trois questions. Le detail si tu en as envie.'),
+          el('h2', { class: 'card-title' }, 'Ta journée en bref'),
+          el('p', { class: 'card-hint' }, 'Trois questions. Le détail si tu en as envie.'),
           ...CHECKIN_SLOTS.map(renderCheckin),
         ]),
         renderNote(),
@@ -256,7 +256,7 @@ export function createExpressView({ store, root }) {
         el('p', { class: 'footer-note' }, [
           saveState,
           el('br'),
-          "Tes donnees restent sur cet appareil. Daylog n'envoie rien, nulle part.",
+          "Tes données restent sur cet appareil. Daylog n'envoie rien, nulle part.",
         ]),
       ]),
     ]);
@@ -295,14 +295,14 @@ export function createExpressView({ store, root }) {
     if (event === 'dirty') {
       box.classList.add('is-dirty');
       box.classList.remove('is-error');
-      text.textContent = 'Enregistrement...';
+      text.textContent = 'Enregistrement…';
     } else if (event === 'saved') {
       box.classList.remove('is-dirty', 'is-error');
-      text.textContent = detail?.at ? `Enregistre a ${formatTime(detail.at)}` : 'Enregistre';
+      text.textContent = detail?.at ? `Enregistré à ${formatTime(detail.at)}` : 'Enregistré';
     } else if (event === 'save-error') {
       box.classList.add('is-error');
-      text.textContent = "L'enregistrement a echoue. Tes donnees sont toujours a l'ecran.";
-      announce("L'enregistrement a echoue.", true);
+      text.textContent = "L'enregistrement a échoué. Tes données sont toujours à l'écran.";
+      announce("L'enregistrement a échoué.", true);
     }
   });
 

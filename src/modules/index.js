@@ -16,7 +16,7 @@ import { mean, round } from '../core/summary.js';
 
 export const CHECKIN_SLOTS = [
   { id: 'morning', label: 'Matin' },
-  { id: 'afternoon', label: 'Apres-midi' },
+  { id: 'afternoon', label: 'Après-midi' },
   { id: 'evening', label: 'Soir' },
 ];
 

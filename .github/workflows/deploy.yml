@@ -3,12 +3,9 @@
 # Une fois active, l'adresse est https://fostimi.github.io/Daylog/ et se met a
 # jour toute seule, environ une minute apres chaque modification.
 #
-# ATTENTION : GitHub Pages ne fonctionne sur un depot PRIVE qu'avec un compte
-# payant (Pro, Team ou Enterprise). Sur un compte gratuit, il faut que le depot
-# soit public. Voir docs/deploiement.md pour les alternatives.
-#
-# A faire une seule fois avant que cela marche :
-#   Depot -> Settings -> Pages -> Source : "GitHub Actions"
+# Rien a configurer a la main : `enablement: true` active Pages au premier
+# passage. Le depot doit etre public, ou le compte doit avoir un abonnement
+# payant -- GitHub Pages ne publie pas un depot prive sur un compte gratuit.
 
 name: Deploiement
 
@@ -31,8 +28,8 @@ jobs:
   verifier:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -46,8 +43,8 @@ jobs:
     needs: verifier
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -62,7 +59,11 @@ jobs:
       - name: Verification de bout en bout
         run: npm run smoke
 
+      # `enablement: true` active Pages tout seul au premier deploiement :
+      # sans lui, l'action echoue tant que personne n'a coche l'option a la main.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

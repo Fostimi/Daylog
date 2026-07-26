@@ -154,7 +154,8 @@ saisie puisse devenir du balisage.
 |---|---|
 | `npm test` | 60 tests unitaires |
 | `npm run test:timezones` | la suite complète dans 10 fuseaux |
-| `node scripts/smoke.js` | 25 vérifications dans un vrai navigateur |
+| `npm run smoke` | 43 vérifications dans un vrai navigateur |
+| `npm run verify` | tout l'enchaînement |
 
 Le test de bout en bout intercepte **toutes** les requêtes réseau et échoue s'il
 en sort une seule. C'est ainsi que la promesse « rien ne quitte l'appareil »
@@ -168,10 +169,59 @@ texte** — c'est ce dernier test qui a révélé deux bugs invisibles autrement
 
 | | Brut | Compressé |
 |---|---|---|
-| JavaScript | 21,4 Ko | 8,1 Ko |
-| CSS | 6,7 Ko | 1,9 Ko |
+| JavaScript | 23,2 Ko | 8,8 Ko |
+| CSS | 9,4 Ko | 2,5 Ko |
 | HTML | 1,6 Ko | 0,7 Ko |
-| **Total chargé** | **29 Ko** | |
+| **Total chargé** | **32 Ko** | |
+| *Première ouverture (onboarding)* | *+7,9 Ko* | *+3,3 Ko* |
+
+L'onboarding forme un fichier séparé, téléchargé uniquement à la première
+ouverture. Les personnes déjà installées n'en paient jamais le poids — c'est le
+découpage par module qui rend cela possible, et le principe s'appliquera à
+chaque section ajoutée.
 
 Aucune dépendance à l'exécution : ni framework, ni bibliothèque de graphiques,
 ni police externe. Le v5 chargeait à lui seul 200 Ko de Chart.js depuis un CDN.
+
+## Décision 9 — L'onboarding pose des questions, il ne coche pas des cases
+
+C'est là que se joue l'essentiel de l'inclusion, et cela tient à la formulation
+autant qu'au code.
+
+On ne demande pas « activer le module cycle ? » mais **« as-tu un cycle
+menstruel à suivre ? »**. On ne demande jamais « peux-tu faire du sport ? » —
+formulation qui range les gens en capables et incapables — mais **« comment
+bouges-tu ? »**, qui accueille la marche, le fauteuil roulant et les béquilles
+sur le même plan, sans hiérarchie.
+
+Quatre règles tenues dans tout l'écran de présentation :
+
+1. **La promesse de confidentialité passe avant toute question.** On explique ce
+   qu'on ne fait pas des données avant d'en demander.
+2. **Aucune réponse n'est pré-cochée.** On n'induit rien, et une question passée
+   reste `null` — jamais une valeur par défaut déguisée.
+3. **Chaque question est passable**, sans conséquence.
+4. **Une seule question par écran**, pour que ce soit rapide et jamais
+   intimidant.
+
+Techniquement, les choix reposent sur des `input` natifs enveloppés dans des
+`label`, à l'intérieur de `fieldset`/`legend` : toute la ligne est cliquable, le
+clavier fonctionne sans une ligne de code, et les lecteurs d'écran annoncent
+correctement le groupe et l'état de chaque option. Le focus se déplace sur le
+titre à chaque changement d'écran — sans cela, un lecteur d'écran resterait sur
+l'ancien contenu.
+
+Les réponses alimentent le registre de modules et les « capacités » : un module
+qui exige une capacité absente reste invisible. Sans montre connectée, aucun
+champ de fréquence cardiaque ou d'oxygénation n'apparaît — pas de case que l'on
+ne pourrait pas remplir.
+
+## Décision 10 — Un garde-fou orthographique
+
+L'application est en français. Un texte affiché sans ses accents — « journee »,
+« regulier », « repere » — est une faute que tout le monde voit.
+
+La vérification de bout en bout inspecte le texte **réellement rendu** à chaque
+écran et signale les formes fautives courantes. C'est un test qui a déjà servi :
+la première version de l'onboarding avait été écrite sans accents, et rien
+d'autre ne l'aurait signalé automatiquement.
