@@ -154,7 +154,7 @@ saisie puisse devenir du balisage.
 |---|---|
 | `npm test` | 83 tests unitaires |
 | `npm run test:timezones` | la suite complète dans 10 fuseaux |
-| `npm run smoke` | 94 vérifications dans un vrai navigateur |
+| `npm run smoke` | 103 vérifications dans un vrai navigateur |
 | `npm run verify` | tout l'enchaînement |
 
 Le test de bout en bout intercepte **toutes** les requêtes réseau et échoue s'il
@@ -167,21 +167,24 @@ texte** — c'est ce dernier test qui a révélé deux bugs invisibles autrement
 
 ## Poids
 
-| | Brut | Compressé |
-|---|---|---|
-| JavaScript | 23,2 Ko | 8,8 Ko |
-| CSS | 9,4 Ko | 2,5 Ko |
-| HTML | 1,6 Ko | 0,7 Ko |
-| **Total chargé** | **32 Ko** | |
-| *Première ouverture (onboarding)* | *+7,9 Ko* | *+3,3 Ko* |
+Mesuré compressé, comme le sert un vrai hébergeur :
 
-L'onboarding forme un fichier séparé, téléchargé uniquement à la première
-ouverture. Les personnes déjà installées n'en paient jamais le poids — c'est le
-découpage par module qui rend cela possible, et le principe s'appliquera à
-chaque section ajoutée.
+| | Compressé |
+|---|---|
+| Ouverture quotidienne | **16,4 Ko** |
+| Première ouverture (avec la présentation) | 19,4 Ko |
+| Cumul de tous les écrans | 31,5 Ko |
 
 Aucune dépendance à l'exécution : ni framework, ni bibliothèque de graphiques,
 ni police externe. Le v5 chargeait à lui seul 200 Ko de Chart.js depuis un CDN.
+
+Chaque écran et chaque module forme un fichier séparé, téléchargé à sa première
+ouverture. Une session ordinaire ne charge que l'écran du jour : le bilan, les
+données et le profil ne coûtent rien tant qu'on ne les ouvre pas.
+
+Le budget est vérifié automatiquement, et distingue ces trois chiffres — les
+confondre ferait grossir la limite à chaque écran ajouté, et le nombre ne
+voudrait plus rien dire.
 
 ## Décision 9 — L'onboarding pose des questions, il ne coche pas des cases
 
@@ -382,3 +385,26 @@ Les phrases sont **écrites en toutes lettres**, pas composées à partir de
 morceaux. Le premier jet assemblait sujet, adverbe et verbe génériquement et
 produisait « ton nuits nettement va à l'inverse de ton stress ». Le français
 s'accorde : on l'écrit. Un test verrouille l'absence de ce genre de faute.
+
+## Décision 19 — Un menu, pas un bouton par écran
+
+La barre du haut accumulait un bouton par écran : quatre à la dernière mesure,
+et elle débordait déjà à 200 % de taille de texte. Chaque écran ajouté aurait
+empiré les choses.
+
+Le cahier des charges prévoyait un menu déroulant ; il est en place, et la barre
+revient à deux boutons — la navigation entre les jours, et le menu.
+
+Le motif retenu est le plus simple qui soit correct : un bouton `aria-expanded`
+qui révèle une liste de boutons. Volontairement **pas** de `role="menu"` — ce
+rôle impose une gestion complète des flèches et de la touche Home, et mal
+implémenté il dégrade l'expérience au lieu de l'améliorer. Une liste de boutons
+se navigue déjà parfaitement au clavier.
+
+Ce qui est géré : fermeture par Échap, fermeture au clic extérieur, focus qui
+entre dans le menu à l'ouverture et **revient sur le bouton** à la fermeture —
+sans quoi la tabulation repartirait du haut de la page. L'écran courant porte
+`aria-current`, pas seulement une couleur.
+
+Le routeur enregistre la journée en cours avant chaque changement d'écran :
+naviguer ne doit jamais faire perdre une saisie.

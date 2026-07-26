@@ -11,6 +11,7 @@
  */
 
 import { el, mount, announce } from './dom.js';
+import { topbar } from './menu.js';
 import { scale, textarea } from './controls.js';
 import { CHECKIN_SLOTS, createCheckin } from '../modules/index.js';
 import { enabledModules } from '../core/modules.js';
@@ -19,7 +20,7 @@ import { toDate, today, addDays, isFuture } from '../core/date.js';
 import { backupUrgency, daysSinceBackup } from '../core/backup.js';
 import * as db from '../core/db.js';
 
-export function createExpressView({ store, root, onOpenSettings, onOpenBilan }) {
+export function createExpressView({ store, root, go }) {
   let backupLevel = null; // null | 'due' | 'overdue'
 
   /** Le rappel est evalue une fois par ouverture, pas a chaque rendu. */
@@ -207,44 +208,28 @@ export function createExpressView({ store, root, onOpenSettings, onOpenBilan }) 
     const dateObj = toDate(date);
     const isToday = date === today(store.getSettings().dayStartHour || 0);
 
-    const header = el('header', { class: 'topbar' }, [
-      el('button', {
-        class: 'icon-btn',
-        type: 'button',
-        'aria-label': 'Jour précédent',
-        onClick: () => go(-1),
-      }, '←'),
-      el('h1', {}, [
-        isToday ? "Aujourd'hui" : formatDayLong(dateObj),
-        el('span', { class: 'topbar-date' }, isToday ? formatDayLong(dateObj) : ''),
-      ]),
-      el('button', {
-        class: 'icon-btn',
-        type: 'button',
-        'aria-label': 'Jour suivant',
-        disabled: isFuture(addDays(date, 1)),
-        onClick: () => go(1),
-      }, '→'),
-      el('button', {
-        class: 'icon-btn',
-        type: 'button',
-        id: 'open-bilan',
-        'aria-label': 'Voir mon bilan',
-        onClick: () => onOpenBilan?.(),
-      }, '📊'),
-      // Pastille sur l'engrenage : le bandeau se lit une fois puis se noie dans
-      // la page, la pastille reste visible tant que la sauvegarde n'est pas
-      // faite. Le libelle accessible porte l'information, pas seulement la
-      // couleur.
-      el('button', {
-        class: `icon-btn${backupLevel ? ` has-alert is-${backupLevel}` : ''}`,
-        type: 'button',
-        'aria-label': backupLevel
-          ? 'Mes données et réglages — sauvegarde à faire'
-          : 'Mes données et réglages',
-        onClick: () => onOpenSettings?.(),
-      }, '⚙'),
-    ]);
+    const header = topbar({
+      title: isToday ? "Aujourd'hui" : formatDayLong(dateObj),
+      subtitle: isToday ? formatDayLong(dateObj) : null,
+      current: 'today',
+      go,
+      alert: backupLevel,
+      before: [
+        el('button', {
+          class: 'icon-btn',
+          type: 'button',
+          'aria-label': 'Jour précédent',
+          onClick: () => goDay(-1),
+        }, '←'),
+        el('button', {
+          class: 'icon-btn',
+          type: 'button',
+          'aria-label': 'Jour suivant',
+          disabled: isFuture(addDays(date, 1)),
+          onClick: () => goDay(1),
+        }, '→'),
+      ],
+    });
 
     const saveState = el('div', { class: 'save-state', dataset: { role: 'save-state' } }, [
       el('span', { class: 'save-dot', 'aria-hidden': 'true' }),
@@ -321,7 +306,7 @@ export function createExpressView({ store, root, onOpenSettings, onOpenBilan }) 
       el('button', {
         class: 'btn btn-sm',
         type: 'button',
-        onClick: () => onOpenSettings?.(),
+        onClick: () => go('data'),
       }, 'Sauvegarder'),
     ]);
   }
@@ -354,7 +339,7 @@ export function createExpressView({ store, root, onOpenSettings, onOpenBilan }) 
     }
   }
 
-  async function go(delta) {
+  async function goDay(delta) {
     const next = addDays(store.getDate(), delta);
     if (isFuture(next)) return;
     await store.loadDay(next);
@@ -381,5 +366,5 @@ export function createExpressView({ store, root, onOpenSettings, onOpenBilan }) 
     }
   });
 
-  return { render, go, refreshBackupNeed };
+  return { render, goDay, refreshBackupNeed };
 }

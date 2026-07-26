@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, extname } from 'node:path';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { gzipSync } from 'node:zlib';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const PORT = 4319;
@@ -26,15 +27,37 @@ const MIME = {
   '.json': 'application/json',
 };
 
+/**
+ * Serveur de test.
+ *
+ * Il compresse comme le ferait un vrai hebergeur. Sans cela, les mesures de
+ * poids porteraient sur des octets que personne ne telecharge jamais --
+ * GitHub Pages, Cloudflare et Netlify compressent tous -- et le budget serait
+ * environ trois fois trop pessimiste.
+ */
 function serve() {
   return new Promise((resolve) => {
     const server = createServer(async (req, res) => {
       try {
         let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
         if (path === '/') path = '/index.html';
-        const body = await readFile(join(ROOT, path));
-        res.writeHead(200, { 'Content-Type': MIME[extname(path)] || 'application/octet-stream' });
-        res.end(body);
+        const raw = await readFile(join(ROOT, path));
+        const type = MIME[extname(path)] || 'application/octet-stream';
+        const compressible = /text|javascript|json|svg|manifest/.test(type);
+        const accepts = /gzip/.test(req.headers['accept-encoding'] || '');
+
+        if (compressible && accepts) {
+          const body = gzipSync(raw);
+          res.writeHead(200, {
+            'Content-Type': type,
+            'Content-Encoding': 'gzip',
+            'Content-Length': body.length,
+          });
+          res.end(body);
+        } else {
+          res.writeHead(200, { 'Content-Type': type, 'Content-Length': raw.length });
+          res.end(raw);
+        }
       } catch {
         res.writeHead(404).end('not found');
       }
@@ -122,8 +145,23 @@ async function scanAccents() {
   }
 }
 
+/** Navigue par le menu, comme le ferait quelqu'un. */
+async function navigate(destination) {
+  await page.locator('.nav-toggle').click();
+  await page.locator(`.nav-item:has-text("${destination}")`).click();
+}
+
 await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle' });
 await scanAccents();
+
+/** Poids reellement telecharge a cet instant. */
+const weight = () =>
+  page.evaluate(() =>
+    performance.getEntriesByType('resource').reduce((a, r) => a + (r.encodedBodySize || 0), 0)
+  );
+
+// Poids de la toute premiere ouverture : application + presentation.
+const firstOpenWeight = await weight();
 
 // ══════════════════════════════════════════════════ premiere ouverture
 
@@ -433,9 +471,41 @@ check(
   afterArchive[0]?.modules?.habits?.done?.length === 1
 );
 
+// ══════════════════════════════════════════════════ menu de navigation
+
+await page.locator('.nav-toggle').click();
+check('le menu s ouvre', await page.locator('.nav-panel').isVisible());
+check(
+  "l'etat ouvert est expose aux lecteurs d'ecran",
+  (await page.locator('.nav-toggle').getAttribute('aria-expanded')) === 'true'
+);
+check(
+  'le focus entre dans le menu a l ouverture',
+  await page.evaluate(() => document.activeElement?.classList.contains('nav-item'))
+);
+check(
+  "l'ecran courant est signale autrement que par la couleur",
+  (await page.locator('.nav-item[aria-current="page"]').innerText()).includes("Aujourd'hui")
+);
+await page.keyboard.press('Escape');
+check('Echap referme le menu', !(await page.locator('.nav-panel').isVisible()));
+check(
+  'le focus revient sur le bouton du menu',
+  await page.evaluate(() => document.activeElement?.classList.contains('nav-toggle'))
+);
+await page.locator('.nav-toggle').click();
+await page.locator('#main').click({ position: { x: 5, y: 5 } });
+check('un clic exterieur referme le menu', !(await page.locator('.nav-panel').isVisible()));
+
+check(
+  'la barre du haut ne porte plus qu un bouton par ecran plus le menu',
+  (await page.locator('.topbar .icon-btn').count()) === 3,
+  `${await page.locator('.topbar .icon-btn').count()} boutons`
+);
+
 // ══════════════════════════════════════════════════ donnees et reglages
 
-await page.locator('.topbar .icon-btn[aria-label="Mes données et réglages"]').click();
+await navigate('Mes données');
 await page.waitForSelector('.facts');
 await scanAccents();
 check('l ecran des donnees s ouvre', (await page.locator('.facts').count()) === 1);
@@ -481,7 +551,7 @@ check(
 );
 
 // ---------------------------------------------------------------- profil
-await page.locator('#open-profile').click();
+await navigate('Profil');
 await page.waitForSelector('#profile-name');
 await scanAccents();
 check('l ecran profil s ouvre', (await page.locator('#profile-name').count()) === 1);
@@ -526,9 +596,7 @@ check(
   (await page.locator('.btn-danger').innerText()).includes('Effacer')
 );
 
-await page.locator('.topbar .icon-btn').first().click(); // retour aux donnees
-await page.waitForSelector('.facts');
-await page.locator('.topbar .icon-btn').first().click(); // retour a la journee
+await navigate("Aujourd'hui");
 await page.waitForSelector('[data-slot]');
 check('on revient a sa journee', (await page.locator('[data-slot]').count()) === 3);
 
@@ -582,7 +650,7 @@ await page.evaluate(async () => {
 });
 
 await page.reload({ waitUntil: 'networkidle' });
-await page.locator('#open-bilan').click();
+await navigate('Bilan');
 await page.waitForSelector('.chart-svg');
 await scanAccents();
 
@@ -644,7 +712,7 @@ const bilanOverflow = await page.evaluate(
 );
 check('le bilan ne deborde pas horizontalement', !bilanOverflow);
 
-await page.locator('.topbar .icon-btn').first().click();
+await navigate("Aujourd'hui");
 await page.waitForSelector('[data-slot]');
 
 // ══════════════════════════════════════════════════ vie privee
@@ -734,15 +802,54 @@ check(
 
 // ══════════════════════════════════════════════════ poids et theme
 
-const sizes = await page.evaluate(() =>
-  performance.getEntriesByType('resource').reduce((a, r) => a + (r.encodedBodySize || 0), 0)
-);
-check('poids total charge sous 60 Ko', sizes < 60_000, `${(sizes / 1024).toFixed(1)} Ko`);
+/*
+ * Poids.
+ *
+ * Deux mesures, parce qu'elles ne decrivent pas la meme chose.
+ *
+ * La premiere est prise dans le navigateur, juste apres le tout premier
+ * chargement -- avant que le service worker prenne la main. C'est ce que
+ * telecharge quelqu'un qui installe l'application.
+ *
+ * La seconde lit les fichiers construits et les compresse comme le ferait un
+ * hebergeur. On ne peut pas la prendre dans le navigateur : une fois le service
+ * worker actif, les reponses qu'il sert rapportent leur taille DECOMPRESSEE, ce
+ * qui triple artificiellement le chiffre.
+ */
 check(
-  'la presentation n est plus telechargee ensuite',
-  !(await page.evaluate(() =>
-    performance.getEntriesByType('resource').some((r) => r.name.includes('onboarding'))
-  ))
+  'premiere ouverture sous 30 Ko',
+  firstOpenWeight < 30 * 1024,
+  `${(firstOpenWeight / 1024).toFixed(1)} Ko`
+);
+
+const { readdir } = await import('node:fs/promises');
+const assets = await readdir(join(ROOT, 'assets'));
+
+async function gzippedSize(file) {
+  return gzipSync(await readFile(join(ROOT, file))).length;
+}
+
+// Ce qu'une ouverture ordinaire telecharge : l'application et son style, sans
+// la presentation ni les ecrans annexes.
+const coreFiles = [
+  'index.html',
+  ...assets.filter((f) => /^index-.*\.(js|css)$/.test(f)).map((f) => `assets/${f}`),
+];
+const coreWeight = (await Promise.all(coreFiles.map(gzippedSize))).reduce((a, b) => a + b, 0);
+check(
+  'ouverture quotidienne sous 25 Ko',
+  coreWeight < 25 * 1024,
+  `${(coreWeight / 1024).toFixed(1)} Ko`
+);
+
+// Le cumul de tous les ecrans, que seul un parcours exhaustif atteint : une
+// session ordinaire n'ouvre pas le bilan, les donnees ET le profil.
+const allFiles = ['index.html', ...assets.map((f) => `assets/${f}`)];
+const totalWeight = (await Promise.all(allFiles.map(gzippedSize))).reduce((a, b) => a + b, 0);
+check(
+  'cumul de tous les ecrans sous 45 Ko',
+  totalWeight < 45 * 1024,
+  `${(totalWeight / 1024).toFixed(1)} Ko`
 );
 
 await page.emulateMedia({ colorScheme: 'dark' });

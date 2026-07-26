@@ -16,11 +16,12 @@
  */
 
 import { el, mount, announce } from './dom.js';
+import { topbar } from './menu.js';
 import { choice } from './controls.js';
 import { WEARABLES, MOBILITY, CYCLE } from '../modules/profile-options.js';
 import * as db from '../core/db.js';
 
-export function createProfileView({ store, root, onBack, onReset }) {
+export function createProfileView({ store, root, go, onReset, alert = null }) {
   let status = null;
 
   function setStatus(message) {
@@ -86,15 +87,7 @@ export function createProfileView({ store, root, onBack, onReset }) {
 
     mount(root, [
       el('a', { class: 'skip-link', href: '#main' }, 'Aller au contenu'),
-      el('header', { class: 'topbar' }, [
-        el('button', {
-          class: 'icon-btn',
-          type: 'button',
-          'aria-label': 'Revenir en arrière',
-          onClick: onBack,
-        }, '←'),
-        el('h1', {}, 'Profil'),
-      ]),
+      topbar({ title: 'Profil', current: 'profile', go, alert }),
 
       el('main', { class: 'app', id: 'main' }, [
         status && el('div', { class: 'banner', role: 'status' }, el('p', {}, status)),

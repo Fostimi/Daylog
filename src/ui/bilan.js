@@ -24,6 +24,7 @@
  */
 
 import { el, mount } from './dom.js';
+import { topbar } from './menu.js';
 import { barChart, lineChart } from './charts.js';
 import * as db from '../core/db.js';
 import { lastNDays, today, toDate } from '../core/date.js';
@@ -37,7 +38,7 @@ const PERIODS = [
   { days: 90, label: '3 mois' },
 ];
 
-export function createBilanView({ store, root, onBack }) {
+export function createBilanView({ store, root, go, alert = null }) {
   let periodDays = 30;
 
   async function draw() {
@@ -56,15 +57,7 @@ export function createBilanView({ store, root, onBack }) {
 
     mount(root, [
       el('a', { class: 'skip-link', href: '#main' }, 'Aller au contenu'),
-      el('header', { class: 'topbar' }, [
-        el('button', {
-          class: 'icon-btn',
-          type: 'button',
-          'aria-label': 'Revenir à ma journée',
-          onClick: onBack,
-        }, '←'),
-        el('h1', {}, 'Bilan'),
-      ]),
+      topbar({ title: 'Bilan', current: 'bilan', go, alert }),
 
       el('main', { class: 'app', id: 'main' }, [
         // Choix de la periode

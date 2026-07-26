@@ -18,6 +18,7 @@
  */
 
 import { el, mount, announce } from './dom.js';
+import { topbar } from './menu.js';
 import * as db from '../core/db.js';
 import {
   buildBackup, toJSON, gzip, parseBackupFile, restoreBackup, backupFilename,
@@ -25,7 +26,7 @@ import {
 } from '../core/backup.js';
 import { allModules, enabledModules } from '../core/modules.js';
 
-export function createSettingsView({ store, root, onBack, onOpenProfile }) {
+export function createSettingsView({ store, root, go, alert = null }) {
   let status = null;
   let busy = false;
 
@@ -169,22 +170,7 @@ export function createSettingsView({ store, root, onBack, onOpenProfile }) {
 
     mount(root, [
       el('a', { class: 'skip-link', href: '#main' }, 'Aller au contenu'),
-      el('header', { class: 'topbar' }, [
-        el('button', {
-          class: 'icon-btn',
-          type: 'button',
-          'aria-label': 'Revenir à ma journée',
-          onClick: onBack,
-        }, '←'),
-        el('h1', {}, 'Mes données'),
-        el('button', {
-          class: 'icon-btn',
-          type: 'button',
-          id: 'open-profile',
-          'aria-label': 'Ouvrir mon profil',
-          onClick: () => onOpenProfile?.(),
-        }, '👤'),
-      ]),
+      topbar({ title: 'Mes données', current: 'data', go, alert }),
 
       el('main', { class: 'app', id: 'main' }, [
         status &&
