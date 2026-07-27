@@ -56,6 +56,33 @@ export const MOBILITY = [
   { id: 'aids', label: 'Avec une aide à la marche', hint: 'Canne, béquilles, déambulateur' },
   { id: 'varies', label: 'Ça dépend des jours', hint: 'Tu ajusteras au quotidien' },
 ];
+/**
+ * Genre.
+ *
+ * Question posee UNIQUEMENT si la personne suit son alimentation, et qui ne
+ * sert qu'a une chose : choisir la reference des formules de depense au repos,
+ * calibrees separement sur des groupes feminins et masculins. Elle ne change ni
+ * la facon dont l'application s'adresse a la personne -- c'est une autre
+ * question -- ni quoi que ce soit d'autre.
+ *
+ * « Personne trans » ouvre un choix explicite plutot qu'une deduction : qui
+ * suit une transition connait son etape mieux que n'importe quelle regle.
+ */
+export const GENDERS = [
+  { id: 'woman', label: 'Femme' },
+  { id: 'man', label: 'Homme' },
+  {
+    id: 'nonbinary',
+    label: 'Non binaire',
+    hint: 'Daylog prend le milieu des deux références',
+  },
+  {
+    id: 'trans',
+    label: 'Personne trans',
+    hint: 'Tu choisis toi-même la référence, et peux la faire glisser',
+  },
+];
+
 export const CYCLE = [
   { id: 'regular', label: 'Oui, plutôt régulier' },
   { id: 'irregular', label: 'Oui, irrégulier' },

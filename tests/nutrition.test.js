@@ -3,7 +3,14 @@ import assert from 'node:assert/strict';
 import {
   ACTIVITY_LEVELS,
   WEIGHT_GOALS,
+  CALC_BASES,
+  TRANSITION_DIRECTIONS,
+  DEFAULT_SPLIT,
+  MIN_DAYS_FOR_SPLIT,
   KCAL_PER_KG,
+  basisForGender,
+  mealSplit,
+  splitTarget,
   activityFactor,
   goalDelta,
   basalRate,
@@ -38,6 +45,37 @@ test('aucun libelle d objectif ne classe la personne', () => {
   const juge = /agressi|seche|sèche|extrême|extreme|choc/i;
   for (const goal of WEIGHT_GOALS) {
     assert.equal(juge.test(`${goal.label} ${goal.hint}`), false, goal.label);
+  }
+});
+
+// ------------------------------------------------------------------ genre
+
+test('la reference se deduit du genre, sauf pour les personnes trans', () => {
+  // Les formules publiees ont ete calibrees separement : la difference est
+  // reelle, et faire porter ce choix technique a chacun etait maladroit autant
+  // qu'inutile.
+  assert.equal(basisForGender('woman'), 'b');
+  assert.equal(basisForGender('man'), 'a');
+  assert.equal(basisForGender('nonbinary'), 'median');
+  assert.equal(basisForGender('trans'), null, 'la personne choisit elle-meme');
+  assert.equal(basisForGender(null), null);
+});
+
+test('la reference non binaire tombe entre les deux', () => {
+  const a = basalRate({ ...CORPS, body: { calcBasis: 'a' } }).value;
+  const b = basalRate({ ...CORPS, body: { calcBasis: 'b' } }).value;
+  const median = basalRate({ ...CORPS, body: { calcBasis: 'median' } }).value;
+  assert.equal(median, (a + b) / 2);
+  assert.equal(median < a && median > b, true);
+});
+
+test('le choix explicite ne propose que ce qui a du sens a une personne trans', () => {
+  assert.deepEqual(CALC_BASES.map((c) => c.id), ['b', 'a', 'interpolated']);
+  assert.deepEqual(TRANSITION_DIRECTIONS.map((d) => d.id), ['mtf', 'ftm']);
+  // Chaque sens part d'une reference et va vers l'autre, sans quoi
+  // l'interpolation n'aurait rien a interpoler.
+  for (const dir of TRANSITION_DIRECTIONS) {
+    assert.notEqual(dir.from, dir.to);
   }
 });
 
@@ -192,6 +230,55 @@ test('les calories se deduisent des macros quand elles manquent', () => {
   assert.equal(kcalFromMacros({ protein: 30, carbs: 50, fat: 10 }), 30 * 4 + 50 * 4 + 10 * 9);
   assert.equal(kcalFromMacros({ protein: 30 }), 120, 'un seul macro suffit');
   assert.equal(kcalFromMacros({}), null);
+});
+
+// ------------------------------------------------- repartition sur la journee
+
+/** `n` journees notees, avec une repartition volontairement deseequilibree. */
+function journees(n) {
+  return Array.from({ length: n }, (_, i) => ({
+    date: `2026-06-${String(i + 1).padStart(2, '0')}`,
+    modules: {
+      nutrition: {
+        items: [
+          { slot: 'lunch', kcal: 800 },
+          { slot: 'dinner', kcal: 1200 },
+        ],
+      },
+    },
+  }));
+}
+
+test('sans assez de journees, on annonce une repartition courante', () => {
+  const out = mealSplit(journees(MIN_DAYS_FOR_SPLIT - 1));
+  assert.equal(out.source, 'default');
+  assert.deepEqual(out.split, DEFAULT_SPLIT);
+});
+
+test('avec assez de journees, c est la repartition reelle qui parle', () => {
+  // Quelqu'un qui ne dejeune jamais n'a que faire d'un modele qui lui attribue
+  // un tiers de ses calories le matin.
+  const out = mealSplit(journees(MIN_DAYS_FOR_SPLIT));
+  assert.equal(out.source, 'observed');
+  assert.equal(out.days, MIN_DAYS_FOR_SPLIT);
+  assert.equal(out.split.breakfast, 0);
+  assert.equal(Math.round(out.split.lunch * 100), 40);
+  assert.equal(Math.round(out.split.dinner * 100), 60);
+});
+
+test('les journees sans repas ne comptent pas comme des journees notees', () => {
+  const vides = Array.from({ length: 20 }, (_, i) => ({ date: `2026-05-${i + 1}`, modules: {} }));
+  const out = mealSplit([...vides, ...journees(2)]);
+  assert.equal(out.source, 'default');
+  assert.equal(out.days, 2);
+});
+
+test('la repartition s applique a une cible sans rien inventer', () => {
+  const out = splitTarget(2000, DEFAULT_SPLIT);
+  assert.equal(out.breakfast, 500);
+  assert.equal(out.lunch, 700);
+  assert.equal(Object.values(out).reduce((a, b) => a + b, 0), 2000);
+  assert.equal(splitTarget(null, DEFAULT_SPLIT), null);
 });
 
 // ------------------------------------------------------------- recalage

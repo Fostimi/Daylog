@@ -146,7 +146,86 @@ export const BASE_FOODS = [
   f('sauce-tomate', 'Sauce tomate', 60, 1.5, 8, 2),
   f('houmous', 'Houmous', 230, 7, 12, 17, { unitGrams: { tbsp: 25 } }),
   f('tofu', 'Tofu nature', 120, 12, 2, 7),
-  f('proteine-poudre', 'Protéine en poudre', 380, 78, 6, 4, { unitGrams: { unit: 30 } }),
+  f('proteine-poudre', 'Protéine en poudre (whey)', 380, 78, 6, 4, { unitGrams: { unit: 30 } }),
+
+  // -------------------------------------------------- proteines vegetales
+  //
+  // Cette section n'est pas un supplement : une application de suivi
+  // alimentaire qui ne connait que le poulet et le fromage est inutilisable
+  // pour qui mange vegetarien ou vegan, et l'inutilisabilite se decouvre au
+  // premier repas -- soit exactement au moment ou l'on decide de rester ou non.
+  f('tofu-ferme', 'Tofu ferme', 145, 15, 2, 8),
+  f('tofu-soyeux', 'Tofu soyeux', 60, 6, 2, 3),
+  f('tofu-fume', 'Tofu fumé', 175, 18, 2, 11),
+  f('tempeh', 'Tempeh', 190, 19, 8, 11),
+  f('seitan', 'Seitan', 145, 25, 6, 2),
+  f('proteine-soja', 'Protéine de soja texturée', 335, 50, 30, 1),
+  f('proteine-pois', 'Protéine de pois en poudre', 375, 80, 4, 5, { unitGrams: { unit: 30 } }),
+  f('steak-vegetal', 'Steak végétal', 200, 17, 8, 11, { unitGrams: { unit: 100 } }),
+  f('falafel', 'Falafels', 330, 13, 32, 17, { unitGrams: { unit: 20 } }),
+  f('edamame', 'Édamame', 125, 11, 9, 5),
+  f('haricots-blancs', 'Haricots blancs (cuits)', 130, 9, 19, 0.6),
+  f('pois-casses', 'Pois cassés (crus)', 340, 24, 52, 1.2),
+  f('lentilles-corail', 'Lentilles corail (crues)', 350, 25, 55, 1.5),
+  f('soja-jaune', 'Graines de soja (crues)', 420, 36, 23, 20),
+
+  // ------------------------------------------------ boissons vegetales
+  f('lait-avoine', 'Boisson à l’avoine', 45, 0.8, 7, 1.5, {
+    liquid: true,
+    unitGrams: { glass: 200, bowl: 250 },
+  }),
+  f('lait-soja', 'Boisson au soja', 40, 3.3, 1.5, 1.9, {
+    liquid: true,
+    unitGrams: { glass: 200, bowl: 250 },
+  }),
+  f('lait-amande', 'Boisson à l’amande', 24, 0.5, 2.5, 1.2, {
+    liquid: true,
+    unitGrams: { glass: 200, bowl: 250 },
+  }),
+  f('lait-riz', 'Boisson au riz', 50, 0.3, 10, 1, {
+    liquid: true,
+    unitGrams: { glass: 200, bowl: 250 },
+  }),
+  f('lait-coco', 'Lait de coco', 190, 2, 3, 19, { liquid: true, unitGrams: { tbsp: 15 } }),
+  f('creme-soja', 'Crème de soja', 175, 3, 3, 17, { liquid: true, unitGrams: { tbsp: 15 } }),
+  f('yaourt-soja', 'Yaourt au soja', 70, 4.5, 4, 3.5, { unitGrams: { unit: 125 } }),
+  f('yaourt-coco', 'Yaourt à la coco', 130, 1, 6, 11, { unitGrams: { unit: 125 } }),
+  f('fromage-vegetal', 'Fromage végétal', 280, 1, 22, 21),
+
+  // ------------------------------------------- cereales et sans gluten
+  f('sarrasin', 'Sarrasin (cru)', 345, 13, 62, 3.4),
+  f('pates-sarrasin', 'Pâtes de sarrasin (crues)', 340, 13, 66, 2.5, { unitGrams: { bowl: 80 } }),
+  f('pates-completes', 'Pâtes complètes (crues)', 340, 14, 62, 2.5, { unitGrams: { bowl: 80 } }),
+  f('pates-lentilles', 'Pâtes de lentilles (crues)', 340, 25, 48, 2, { unitGrams: { bowl: 80 } }),
+  f('riz-complet', 'Riz complet (cru)', 350, 8, 74, 2.8, { unitGrams: { bowl: 75 } }),
+  f('millet', 'Millet (cru)', 375, 11, 68, 4),
+  f('epeautre', 'Épeautre (cru)', 340, 15, 62, 2.5),
+  f('polenta', 'Polenta (crue)', 360, 8, 78, 1.5),
+  f('pain-sans-gluten', 'Pain sans gluten', 250, 4, 47, 4, { unitGrams: { slice: 30 } }),
+  f('farine-riz', 'Farine de riz', 360, 6, 80, 1.4, { unitGrams: { tbsp: 10 } }),
+  f('farine-pois-chiche', 'Farine de pois chiche', 385, 22, 50, 7, { unitGrams: { tbsp: 10 } }),
+
+  // ------------------------------------------------- graines et oleagineux
+  f('chia', 'Graines de chia', 490, 17, 8, 31, { unitGrams: { tbsp: 12 } }),
+  f('lin', 'Graines de lin', 530, 18, 3, 42, { unitGrams: { tbsp: 10 } }),
+  f('courge', 'Graines de courge', 560, 30, 11, 45, { unitGrams: { tbsp: 10 } }),
+  f('tournesol', 'Graines de tournesol', 585, 21, 11, 51, { unitGrams: { tbsp: 9 } }),
+  f('sesame', 'Graines de sésame', 570, 18, 12, 50, { unitGrams: { tbsp: 9 } }),
+  f('tahini', 'Purée de sésame (tahini)', 600, 17, 10, 54, { unitGrams: { tbsp: 15 } }),
+  f('beurre-amande', 'Purée d’amande', 630, 21, 7, 56, { unitGrams: { tbsp: 16 } }),
+  f('noisette', 'Noisettes', 630, 15, 7, 61),
+  f('cajou', 'Noix de cajou', 555, 18, 27, 44),
+  f('pistache', 'Pistaches', 560, 20, 16, 45),
+
+  // ------------------------------------------------------------ appoints
+  f('levure-maltee', 'Levure maltée', 355, 45, 20, 5, { unitGrams: { tbsp: 5 } }),
+  f('sirop-erable', 'Sirop d’érable', 260, 0, 67, 0, { unitGrams: { tbsp: 20, tsp: 7 } }),
+  f('sirop-agave', 'Sirop d’agave', 310, 0, 76, 0, { unitGrams: { tbsp: 21, tsp: 7 } }),
+  f('compote', 'Compote sans sucres ajoutés', 50, 0.3, 11, 0.2, { unitGrams: { unit: 100 } }),
+  f('olives', 'Olives', 145, 1, 1, 15),
+  f('cornichon', 'Cornichons', 15, 0.7, 1.5, 0.2, { unitGrams: { unit: 10 } }),
+  f('sauce-soja', 'Sauce soja', 60, 6, 6, 0.1, { liquid: true, unitGrams: { tbsp: 15 } }),
+  f('curry-pate', 'Pâte de curry', 130, 3, 12, 7, { unitGrams: { tbsp: 15 } }),
 ];
 
 /** Nombre d'aliments livres. Sert au test qui surveille le poids de la base. */

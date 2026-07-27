@@ -147,10 +147,17 @@ export function createAideView({ store, root, go, alert = null }) {
 
         section('Les calculs de nutrition', [
           p(
-            'La dépense au repos vient d’une formule publiée, choisie dans ton profil. ',
-            el('strong', {}, 'Ton genre n’entre dans aucun calcul'),
-            ' : ce qui compte est une variable physiologique que tu choisis ' +
-              'explicitement, et qui se change à tout moment.'
+            'La dépense au repos vient d’une formule publiée, calibrée séparément ' +
+              'sur des groupes de référence féminins et masculins. Daylog choisit ' +
+              'la référence à partir de ta réponse sur le genre, ',
+            el('strong', {}, 'et ne s’en sert nulle part ailleurs'),
+            '. Si tu es non binaire, il prend le milieu des deux ; si tu es une ' +
+              'personne trans, tu choisis toi-même et tu peux faire glisser la ' +
+              'référence progressivement.'
+          ),
+          p(
+            'Une masse grasse mesurée l’emporte sur tout : c’est une mesure, pas ' +
+              'une catégorie, et elle ne pose aucune question.'
           ),
           p(
             'Trois chiffres, à ne pas confondre : ce que ton corps dépense au repos, ' +

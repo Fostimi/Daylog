@@ -19,15 +19,23 @@ import { el, mount, announce } from './dom.js';
 import { topbar } from './menu.js';
 import { choice, numberField } from './controls.js';
 import {
-  WEARABLES, MOBILITY, CYCLE,
+  WEARABLES, MOBILITY, CYCLE, GENDERS,
   sanitizeDeclared, DECLARED_CYCLE_RANGE, DECLARED_PERIOD_RANGE,
 } from '../modules/profile-options.js';
 import * as db from '../core/db.js';
-import { ACTIVITY_LEVELS, WEIGHT_GOALS, CALC_BASES, energyNeeds } from '../core/nutrition.js';
+import { enabledModules } from '../core/modules.js';
+import { addDays, today } from '../core/date.js';
+import {
+  ACTIVITY_LEVELS, WEIGHT_GOALS, CALC_BASES, TRANSITION_DIRECTIONS,
+  basisForGender, energyNeeds, mealSplit, splitTarget,
+} from '../core/nutrition.js';
 import { formatNumber } from '../core/i18n.js';
 
 export function createProfileView({ store, root, go, onReset, alert = null }) {
   let status = null;
+  // Les journees recentes, lues une fois : elles servent a montrer comment la
+  // personne repartit REELLEMENT ses repas, plutot qu'un modele theorique.
+  let recentDays = [];
 
   function setStatus(message) {
     status = message;
@@ -104,6 +112,47 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
   }
 
   /**
+   * Le genre.
+   *
+   * Une seule question, un seul usage : choisir la reference des formules de
+   * depense au repos. Elle ne s'affiche que si le suivi alimentaire est actif --
+   * poser une question intime pour ne rien en faire serait indefendable.
+   */
+  function genderCard(profile) {
+    const identity = profile.identity || {};
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title' }, 'Genre'),
+      choice({
+        legend: 'Quel est ton genre ?',
+        name: 'p-gender',
+        options: GENDERS,
+        value: identity.gender || null,
+        onSelect: async (v) => {
+          const current = store.getProfile();
+          await store.setProfile({
+            ...current,
+            identity: { ...current.identity, gender: v },
+            // La reference suit automatiquement, sauf pour les personnes trans
+            // qui choisissent elles-memes, et sauf si une masse grasse mesuree
+            // est deja utilisee -- une mesure vaut mieux qu'une categorie.
+            body:
+              v === 'trans' || current.body?.calcBasis === 'lean-mass'
+                ? current.body
+                : { ...current.body, calcBasis: basisForGender(v) },
+          });
+          setStatus('Modification enregistrée.');
+        },
+        allowNone: true,
+      }),
+      el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        'Sert uniquement à estimer ta dépense au repos : les formules publiées ' +
+          'ont été calibrées séparément sur des groupes féminins et masculins. ' +
+          'Rien d’autre dans l’application ne s’en sert.'
+      ),
+    ]);
+  }
+
+  /**
    * Ton corps.
    *
    * Ces trois chiffres ne servent qu'aux calculs energetiques, et rien d'autre
@@ -153,30 +202,100 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
   }
 
   /**
-   * La base de calcul.
+   * La reference de calcul.
    *
-   * L'ecran le plus delicat du profil apres le cycle. Les formules publiees
-   * ont ete calibrees sur deux groupes de population, et il faut bien choisir
-   * une constante -- mais la deduire d'une case « homme / femme » serait faux
-   * pour une partie des gens et blessant pour une autre.
+   * Deduite du genre pour la plupart des gens : les formules publiees ont ete
+   * calibrees separement sur des groupes de reference feminins et masculins, et
+   * faire porter ce choix technique a chacun etait a la fois maladroit et
+   * inutile. Seules les personnes trans choisissent -- elles connaissent leur
+   * etape mieux que n'importe quelle regle.
    *
-   * On decrit donc ce que chaque variante DECRIT, et on laisse choisir. La voie
-   * par masse grasse mesuree, elle, ne pose meme pas la question : le corps y
-   * est decrit par ce qu'il est.
+   * La masse grasse mesuree, quand elle existe, l'emporte sur tout le reste :
+   * c'est une mesure, pas une categorie, et elle ne pose aucune question.
    */
   function basisCard(profile) {
     const body = profile.body || {};
+    const gender = profile.identity?.gender || null;
+    const isTrans = gender === 'trans';
+    const derived = basisForGender(gender);
+    const usingLean = body.calcBasis === 'lean-mass';
+
+    const dateInput = el('input', {
+      type: 'date',
+      id: 'p-basis-start',
+      class: 'input',
+      onInput: (e) => patchBody({ basisStartDate: e.target.value || null }, { quiet: true }),
+    });
+    dateInput.value = (body.basisStartDate || '').slice(0, 10);
+
     return el('div', { class: 'card' }, [
-      el('h2', { class: 'card-title' }, 'Base de calcul'),
-      choice({
-        legend: 'Sur quelle base estimer ta dépense au repos ?',
-        name: 'p-basis',
-        options: CALC_BASES,
-        value: body.calcBasis || null,
-        onSelect: (v) => patchBody({ calcBasis: v }),
-        allowNone: true,
-      }),
-      body.calcBasis === 'lean-mass' &&
+      el('h2', { class: 'card-title' }, 'Estimation de ta dépense'),
+
+      isTrans
+        ? el('div', {}, [
+            choice({
+              legend: 'Quelle référence utiliser ?',
+              name: 'p-basis',
+              options: CALC_BASES,
+              value: usingLean ? null : body.calcBasis || null,
+              onSelect: (v) => patchBody({ calcBasis: v }),
+              allowNone: true,
+            }),
+            body.calcBasis === 'interpolated' &&
+              el('div', {}, [
+                choice({
+                  legend: 'Dans quel sens ?',
+                  name: 'p-basis-direction',
+                  options: TRANSITION_DIRECTIONS,
+                  value:
+                    TRANSITION_DIRECTIONS.find(
+                      (d) => d.from === body.basisFrom && d.to === body.basisTo
+                    )?.id || null,
+                  onSelect: (v) => {
+                    const dir = TRANSITION_DIRECTIONS.find((d) => d.id === v);
+                    patchBody({ basisFrom: dir?.from || null, basisTo: dir?.to || null });
+                  },
+                }),
+                el('div', { class: 'field' }, [
+                  el('label', { class: 'field-label', for: 'p-basis-start' },
+                    'Depuis quand ?'
+                  ),
+                  dateInput,
+                ]),
+                el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+                  'La référence glisse progressivement sur trois ans.'
+                ),
+              ]),
+          ])
+        : el('p', { class: 'card-hint' },
+            derived
+              ? gender === 'nonbinary'
+                ? 'Daylog prend le milieu des deux références publiées. ' +
+                  'L’estimation est un peu moins précise, et se corrigera sur tes ' +
+                  'mesures réelles.'
+                : 'Déduite de ta réponse sur le genre. Rien à choisir.'
+              : 'Réponds à la question sur le genre pour que Daylog puisse estimer.'
+          ),
+
+      // La mesure l'emporte toujours sur la categorie.
+      el('label', { class: 'onb-option', for: 'p-lean' }, [
+        el('input', {
+          type: 'checkbox',
+          id: 'p-lean',
+          class: 'onb-input',
+          checked: usingLean,
+          onChange: (e) =>
+            patchBody({ calcBasis: e.target.checked ? 'lean-mass' : derived || null }),
+        }),
+        el('span', { class: 'onb-option-text' }, [
+          el('span', { class: 'onb-option-label' }, 'J’ai mesuré ma masse grasse'),
+          el('span', { class: 'onb-option-hint' },
+            'Plus juste que toute référence, et aucune catégorie en jeu'
+          ),
+        ]),
+      ]),
+
+      usingLean &&
         numberField({
           id: 'p-body-fat',
           label: 'Masse grasse mesurée',
@@ -187,14 +306,20 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
           unit: '%',
           onInput: (v) => patchBody({ bodyFatPct: numberOrNull(v) }, { quiet: true }),
         }).node,
-      body.calcBasis === 'lean-mass' &&
+      usingLean &&
         el('p', { class: 'card-hint', style: { marginBottom: '0' } },
           'Mesurée, jamais estimée : balance à impédance, pince à plis, DEXA.'
         ),
     ]);
   }
 
-  /** Activite et objectif : ce vers quoi la personne va, si elle va quelque part. */
+  /**
+   * Activite et objectif.
+   *
+   * L'objectif est un choix a part entiere, et il se refuse. Sans lui, Daylog
+   * affiche ce que le corps depense et s'arrete la -- ce qui est deja un suivi
+   * complet, et le seul qui convienne a qui ne veut pas de cible du tout.
+   */
   function goalsCard(profile) {
     const goals = profile.goals || {};
     return el('div', { class: 'card' }, [
@@ -208,34 +333,54 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
         allowNone: true,
       }),
       choice({
-        legend: 'Un objectif de poids ?',
-        name: 'p-goal',
-        options: WEIGHT_GOALS,
-        value: goals.weight || null,
-        onSelect: (v) => patchGoals({ weight: v }),
-        allowNone: true,
+        legend: 'Veux-tu suivre un objectif de poids ?',
+        name: 'p-has-goal',
+        options: [
+          { id: 'yes', label: 'Oui' },
+          {
+            id: 'no',
+            label: 'Non, juste suivre',
+            hint: 'Aucune cible affichée, seulement ce que tu dépenses',
+          },
+        ],
+        value: goals.hasGoal === true ? 'yes' : goals.hasGoal === false ? 'no' : null,
+        onSelect: (v) =>
+          patchGoals({ hasGoal: v === 'yes', ...(v === 'yes' ? {} : { weight: null }) }),
       }),
-      numberField({
-        id: 'p-protein',
-        label: 'Protéines visées',
-        value: goals.proteinPerKg ?? null,
-        step: 0.1,
-        min: 0.5,
-        max: 4,
-        unit: 'g / kg',
-        onInput: (v) => patchGoals({ proteinPerKg: numberOrNull(v) }, { quiet: true }),
-      }).node,
-      el('p', { class: 'card-hint', style: { marginBottom: '0' } },
-        'Aucune valeur par défaut : sans réponse, aucune cible de protéines.'
-      ),
+      goals.hasGoal === true &&
+        el('div', {}, [
+          choice({
+            legend: 'Dans quel sens ?',
+            name: 'p-goal',
+            options: WEIGHT_GOALS,
+            value: goals.weight || null,
+            onSelect: (v) => patchGoals({ weight: v }),
+            allowNone: true,
+          }),
+          numberField({
+            id: 'p-protein',
+            label: 'Protéines visées',
+            value: goals.proteinPerKg ?? null,
+            step: 0.1,
+            min: 0.5,
+            max: 4,
+            unit: 'g / kg',
+            onInput: (v) => patchGoals({ proteinPerKg: numberOrNull(v) }, { quiet: true }),
+          }).node,
+          el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+            'Aucune valeur par défaut : sans réponse, aucune cible de protéines.'
+          ),
+        ]),
     ]);
   }
 
   /**
-   * Ce que ça donne.
+   * Ce que Daylog calcule, et ce qu'il en fait.
    *
-   * Affiche le resultat, et surtout ce qui manque pour l'obtenir. Un ecran qui
-   * montre trois tirets sans dire pourquoi laisse chercher.
+   * Trois chiffres qu'il ne faut surtout pas confondre, et -- replie -- la
+   * seule chose qui reponde vraiment a « 2300 kcal, ça ressemble a quoi ? » :
+   * leur repartition sur la journee, tiree des journees deja notees quand il y
+   * en a assez.
    */
   function needsCard(profile) {
     const body = profile.body || {};
@@ -246,21 +391,23 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
       ageYears: body.birthYear ? new Date().getFullYear() - body.birthYear : null,
       body,
       activity: goals.activity,
-      goal: goals.weight,
+      goal: goals.hasGoal === true ? goals.weight : null,
     });
 
     const NOMS = {
       weight: 'ton poids',
       height: 'ta taille',
       age: 'ton année de naissance',
-      calcBasis: 'la base de calcul',
+      calcBasis: 'ta réponse sur le genre',
       bodyFat: 'ta masse grasse mesurée',
       activity: 'ton activité',
-      interpolation: 'les détails de la transition',
+      interpolation: 'le sens et la date de ta transition',
     };
 
+    const showTarget = goals.hasGoal === true && needs.target;
+
     return el('div', { class: 'card' }, [
-      el('h2', { class: 'card-title' }, 'Ce que ça donne'),
+      el('h2', { class: 'card-title' }, 'Tes besoins estimés'),
       el('dl', { class: 'facts' }, [
         el('div', { class: 'fact' }, [
           el('dt', {}, 'Au repos'),
@@ -270,11 +417,13 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
           el('dt', {}, 'Dépense estimée'),
           el('dd', {}, `${formatNumber(needs.maintenance ?? null)} kcal`),
         ]),
-        el('div', { class: 'fact' }, [
-          el('dt', {}, 'Cible'),
-          el('dd', {}, `${formatNumber(needs.target ?? null)} kcal`),
-        ]),
+        showTarget &&
+          el('div', { class: 'fact' }, [
+            el('dt', {}, 'Cible'),
+            el('dd', {}, `${formatNumber(needs.target)} kcal`),
+          ]),
       ]),
+
       needs.missing?.length &&
         el('p', { class: 'card-hint', style: { marginBottom: '0' } },
           `Il manque ${needs.missing.map((m) => NOMS[m] || m).join(', ')}.`
@@ -284,17 +433,64 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
           'Cible relevée au niveau de ta dépense au repos : en dessous, ce ne ' +
             'serait plus un objectif.'
         ),
-      needs.target &&
+
+      needs.maintenance && splitBlock(showTarget ? needs.target : needs.maintenance),
+
+      needs.maintenance &&
         el('p', { class: 'card-hint', style: { marginBottom: '0' } },
           'Une estimation à ± 10 %, qui se corrigera sur tes mesures réelles.'
         ),
     ]);
   }
 
+  /** Repartition sur la journee, repliee : elle repond a une question, elle ne s'impose pas. */
+  function splitBlock(kcal) {
+    const { split, source, days } = mealSplit(recentDays);
+    const perSlot = splitTarget(kcal, split);
+    const LABELS = { breakfast: 'Matin', lunch: 'Midi', dinner: 'Soir', snack: 'À côté' };
+
+    return el('details', { class: 'foldable' }, [
+      el('summary', { class: 'foldable-head' }, [
+        el('span', { class: 'field-label' }, 'Ça ressemble à quoi dans une journée ?'),
+        el('span', { class: 'foldable-note' }, `${formatNumber(kcal)} kcal`),
+      ]),
+      el('dl', { class: 'facts' }, Object.entries(perSlot).map(([slot, value]) =>
+        el('div', { class: 'fact' }, [
+          el('dt', {}, LABELS[slot] || slot),
+          el('dd', {}, `${value} kcal`),
+        ])
+      )),
+      el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        source === 'observed'
+          ? `D’après la façon dont tu répartis tes repas, sur ${days} journées notées.`
+          : 'Répartition courante, faute d’assez de journées notées. Elle s’ajustera ' +
+            'sur les tiennes.'
+      ),
+    ]);
+  }
+
+  /**
+   * Les journees recentes, lues une fois a l'ouverture.
+   *
+   * Un echec de lecture ne doit rien empecher : on repart alors sur la
+   * repartition courante, qui est de toute facon le cas le plus frequent.
+   */
+  async function loadRecentDays() {
+    try {
+      const end = today(store.getSettings().dayStartHour || 0);
+      recentDays = await db.getDays(addDays(end, -60), end);
+    } catch {
+      recentDays = [];
+    }
+  }
+
   function draw() {
     const profile = store.getProfile();
     const identity = profile.identity || {};
     const capabilities = store.getCapabilities();
+    const nutritionActive = enabledModules(store.getModuleState(), capabilities).some(
+      (m) => m.id === 'nutrition'
+    );
 
     const nameInput = el('input', {
       id: 'profile-name',
@@ -449,10 +645,11 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
           }),
         ]),
 
-        bodyCard(profile),
-        basisCard(profile),
-        goalsCard(profile),
-        needsCard(profile, capabilities),
+        // Le corps, le genre et les objectifs ne servent qu'a la nutrition :
+        // sans ce suivi, ces questions n'auraient aucune raison d'etre posees.
+        ...(nutritionActive
+          ? [genderCard(profile), bodyCard(profile), basisCard(profile), goalsCard(profile), needsCard(profile)]
+          : []),
 
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title' }, 'Recommencer'),
@@ -482,5 +679,10 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
     ]);
   }
 
-  return { render: draw };
+  return {
+    render: async () => {
+      await loadRecentDays();
+      draw();
+    },
+  };
 }

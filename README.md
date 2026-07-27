@@ -27,7 +27,7 @@ application.
 | ✅ | Bilan, graphiques et phrases de synthèse |
 | ✅ | Cycle menstruel : suivi, symptômes et repère |
 | ✅ | Écran « Comment ça marche » : ce que l'app calcule, et ce qu'elle refuse |
-| ✅ | Alimentation : base d'aliments, aliments et repas à soi, cibles |
+| ✅ | Alimentation : 130 aliments livrés, aliments et repas à soi, cibles |
 | ⬜ | Activité physique, santé et traitements, argent, apprentissage |
 | ⬜ | Verrouillage par code, notifications, installation depuis les stores |
 
@@ -45,7 +45,8 @@ Un carnet de suivi quotidien pensé pour être tenu **vraiment**, sur la durée 
   téléchargé. Pensé pour les téléphones anciens ou presque pleins.
 - **Utilisable par tout le monde.** Navigation clavier, lecteurs d'écran,
   contrastes conformes, et l'interface suit la taille de police réglée sur
-  l'appareil.
+  l'appareil. Le suivi du cycle ne suppose le genre de personne, et la base
+  d'aliments couvre les régimes végétariens, vegan et sans gluten.
 
 ## Ce que ce n'est pas
 
@@ -71,14 +72,21 @@ npm run build    # version de production dans dist/
 ## Vérifier
 
 ```bash
-npm test                  # 176 tests unitaires
+npm test                  # 183 tests unitaires
 npm run test:timezones    # la suite complète dans 10 fuseaux horaires
-npm run smoke             # 153 vérifications dans un vrai navigateur
+npm run smoke             # 165 vérifications dans un vrai navigateur
+npm run stress            # cherche ce qu'on n'avait pas prévu
 npm run verify            # tout l'enchaînement
 ```
 
 Le test de bout en bout intercepte toutes les requêtes réseau et **échoue s'il
 en sort une seule**.
+
+`npm run stress` est différent : il ne suit aucun scénario écrit d'avance. Il
+navigue en zigzag, saisit des valeurs limites, voyage dans le temps, et inspecte
+à chaque écran les erreurs JavaScript, les identifiants HTML en double, les
+débordements horizontaux — y compris à 200 % de taille de texte — et la survie
+des données à un rechargement.
 
 ## Principes de conception
 
@@ -99,10 +107,12 @@ Ils tranchent les arbitrages, dans cet ordre :
 
 ## Documentation
 
+- **[Où en est le projet](docs/passation.md)** — l'état, les décisions à ne pas
+  défaire, et la suite. À lire en premier pour reprendre le fil.
 - [Architecture du socle](docs/architecture.md) — les décisions et ce qui les a
   motivées
 - [Calculs métaboliques](docs/calculs-metaboliques.md) — les formules, et
-  pourquoi l'identité de genre n'entre dans aucune d'elles
+  exactement où le genre entre en jeu — un seul endroit
 - [Suivi du cycle](docs/cycle.md) — les calculs, et ce que Daylog refuse de
   calculer
 - [Nutrition](docs/nutrition.md) — les décisions de conception et la base d'aliments

@@ -64,36 +64,46 @@ export const WEIGHT_GOALS = [
 ];
 
 /**
- * Bases de calcul proposees.
+ * Reference de calcul, deduite du genre.
  *
- * Les formules publiees ont ete calibrees sur deux groupes de population, et il
- * faut bien choisir une constante. La deduire d'une case « homme / femme »
- * serait faux pour une partie des gens et blessant pour une autre : on decrit
- * donc ce que chaque variante DECRIT, et on laisse choisir.
+ * PARTI PRIS, ET IL A CHANGE. Les premieres versions posaient la question de la
+ * « variante de calcul » a tout le monde, avec des libelles qui contournaient le
+ * mot « genre ». C'etait maladroit sur deux plans : le detour se voyait, et il
+ * revenait a faire porter a chacun un choix technique dont la reponse est
+ * evidente pour la plupart des gens.
  *
- * La voie par masse grasse mesuree ne pose meme pas la question -- le corps y
- * est decrit par ce qu'il est, et c'est la plus juste quand elle est possible.
+ * Les formules publiees ont bien ete calibrees separement sur des groupes de
+ * reference feminins et masculins, et cette difference physiologique est reelle.
+ * Daylog en tient donc compte, automatiquement, a partir d'une seule question --
+ * et cette question ne sert qu'ici.
+ *
+ * Deux cas ne se laissent pas ramener a l'une des deux references :
+ *
+ *   non binaire   on prend le milieu des deux, en le disant. L'estimation est
+ *                 moins precise, et le recalage sur les faits la corrigera.
+ *   trans         la personne choisit elle-meme, et peut faire glisser la
+ *                 reference progressivement. C'est le seul cas ou le choix
+ *                 explicite vaut mieux qu'une deduction : qui suit une
+ *                 transition connait son etape mieux que n'importe quelle regle.
  */
+export function basisForGender(gender) {
+  return { woman: 'b', man: 'a', nonbinary: 'median' }[gender] || null;
+}
+
+/** Sens de transition proposes, pour qui choisit la reference glissante. */
+export const TRANSITION_DIRECTIONS = [
+  { id: 'mtf', from: 'a', to: 'b', label: 'Vers la référence féminine' },
+  { id: 'ftm', from: 'b', to: 'a', label: 'Vers la référence masculine' },
+];
+
+/** References explicites, proposees aux personnes trans uniquement. */
 export const CALC_BASES = [
-  {
-    id: 'lean-mass',
-    label: 'À partir de ma masse grasse mesurée',
-    hint: 'La plus juste, si tu l’as mesurée. Aucune variante à choisir.',
-  },
-  {
-    id: 'a',
-    label: 'Variante A',
-    hint: 'Calibrée sur des corps à masse musculaire plus élevée en moyenne',
-  },
-  {
-    id: 'b',
-    label: 'Variante B',
-    hint: 'Calibrée sur des corps à masse grasse plus élevée en moyenne',
-  },
+  { id: 'b', label: 'Référence féminine' },
+  { id: 'a', label: 'Référence masculine' },
   {
     id: 'interpolated',
-    label: 'Entre les deux, en transition',
-    hint: 'Glisse d’une variante à l’autre sur trois ans (hormonothérapie)',
+    label: 'Transition en cours',
+    hint: 'Glisse d’une référence à l’autre sur trois ans',
   },
 ];
 
@@ -158,7 +168,9 @@ export function basalRate({ weightKg, heightCm, ageYears, body = {}, at = new Da
   if (missing.length) return { value: null, missing };
 
   const common = 10 * weight + 6.25 * height - 5 * age;
-  const variant = { a: 5, b: -161 };
+  // Les deux constantes des groupes de calibration, et leur milieu -- qui n'est
+  // publie nulle part, et qui est presente comme l'approximation qu'il est.
+  const variant = { a: 5, b: -161, median: (5 - 161) / 2 };
 
   if (body.calcBasis === 'interpolated') {
     const from = variant[body.basisFrom];
@@ -296,6 +308,55 @@ export function kcalFromMacros({ protein, carbs, fat }) {
   ].filter(([v]) => v !== null);
   if (!parts.length) return null;
   return Math.round(parts.reduce((sum, [v, k]) => sum + v * k, 0));
+}
+
+/**
+ * Repartition d'une cible sur les moments de la journee.
+ *
+ * Repond a une question que l'ecran laissait sans reponse : « 2300 kcal »,
+ * d'accord, mais ça ressemble a quoi dans une journee ?
+ *
+ * Deux sources, dans cet ordre : la repartition REELLE des journees deja notees
+ * si elle existe, sinon une repartition courante presentee comme telle. La
+ * premiere vaut toujours mieux -- quelqu'un qui ne dejeune jamais n'a que faire
+ * d'un modele qui lui attribue un tiers de ses calories a midi.
+ */
+export const DEFAULT_SPLIT = { breakfast: 0.25, lunch: 0.35, dinner: 0.3, snack: 0.1 };
+
+/** Journees notees exigees avant de se fier a la repartition observee. */
+export const MIN_DAYS_FOR_SPLIT = 7;
+
+export function mealSplit(days = [], { minDays = MIN_DAYS_FOR_SPLIT } = {}) {
+  const sums = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+  let counted = 0;
+
+  for (const day of days || []) {
+    const items = day?.modules?.nutrition?.items || [];
+    if (!items.some((i) => num(i?.kcal) !== null)) continue;
+    counted += 1;
+    for (const item of items) {
+      const value = num(item?.kcal);
+      if (value !== null && item.slot in sums) sums[item.slot] += value;
+    }
+  }
+
+  const total = Object.values(sums).reduce((a, b) => a + b, 0);
+  if (counted < minDays || total <= 0) {
+    return { split: { ...DEFAULT_SPLIT }, source: 'default', days: counted };
+  }
+
+  const split = {};
+  for (const [slot, value] of Object.entries(sums)) split[slot] = value / total;
+  return { split, source: 'observed', days: counted };
+}
+
+/** Applique une repartition a une cible, en kcal arrondies. */
+export function splitTarget(kcal, split) {
+  const total = num(kcal);
+  if (total === null) return null;
+  const out = {};
+  for (const [slot, share] of Object.entries(split || {})) out[slot] = Math.round(total * share);
+  return out;
 }
 
 /**

@@ -22,9 +22,10 @@
  */
 
 import { el, mount } from './dom.js';
+import { basisForGender } from '../core/nutrition.js';
 import { optionRow, choice, numberField } from './controls.js';
 import {
-  THEMES, WEARABLES, MOBILITY, CYCLE,
+  THEMES, WEARABLES, MOBILITY, CYCLE, GENDERS,
   sanitizeDeclared, DECLARED_CYCLE_RANGE, DECLARED_PERIOD_RANGE,
 } from '../modules/profile-options.js';
 
@@ -39,6 +40,7 @@ export function createOnboarding({ store, root, onDone }) {
     themes: new Set(),
     wearable: null,
     mobility: null,
+    gender: null,
     cycle: null,
     cycleLength: null,
     periodLength: null,
@@ -55,6 +57,7 @@ export function createOnboarding({ store, root, onDone }) {
       stepIdentity,
       stepThemes,
       stepMobility,
+      stepGender,
       stepWearable,
       stepCycle,
       stepCycleDetail,
@@ -181,6 +184,49 @@ export function createOnboarding({ store, root, onDone }) {
             answers.mobility = v;
           },
         }),
+      ],
+    }),
+  };
+
+  /**
+   * Le genre.
+   *
+   * Posee UNIQUEMENT si la personne a choisi de suivre son alimentation, parce
+   * qu'elle ne sert qu'a ça : les formules de depense au repos ont ete
+   * calibrees separement sur des groupes de reference feminins et masculins.
+   * Poser une question intime sans en faire quoi que ce soit serait
+   * indefendable -- et le dire ici evite qu'on se le demande.
+   */
+  const stepGender = {
+    id: 'gender',
+    when: () => answers.themes.has('food'),
+    render: () => ({
+      title: 'Une question pour les calculs',
+      intro:
+        'Elle ne sert qu’à estimer ce que ton corps dépense au repos, et à rien ' +
+        'd’autre dans l’application.',
+      body: [
+        choice({
+          legend: 'Quel est ton genre ?',
+          name: 'gender',
+          options: GENDERS,
+          value: answers.gender,
+          onSelect: (v) => {
+            answers.gender = v;
+          },
+        }),
+        el('div', { class: 'onb-note' }, [
+          'Les formules publiées ont été calibrées séparément sur des groupes ' +
+            'féminins et masculins : la différence est réelle, et Daylog en tient ' +
+            'compte tout seul. ',
+          el('strong', {}, 'Personne trans'),
+          ' ouvre un choix explicite dans ton profil — tu connais ton étape mieux ' +
+            'que n’importe quelle règle.',
+        ]),
+        el('p', { class: 'onb-hint' },
+          'Cela ne change pas la façon dont l’application te parle : c’était la ' +
+            'question précédente.'
+        ),
       ],
     }),
   };
@@ -456,7 +502,11 @@ export function createOnboarding({ store, root, onDone }) {
         name: answers.name,
         address: answers.address || 'neutral',
         pronouns: null,
+        gender: answers.gender,
       },
+      // La reference de calcul suit la reponse, sauf pour les personnes trans
+      // qui la choisiront elles-memes dans leur profil.
+      body: { calcBasis: answers.gender === 'trans' ? null : basisForGender(answers.gender) },
     });
     await store.setSettings({
       wearable: capabilities.wearable,

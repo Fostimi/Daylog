@@ -17,7 +17,7 @@ corporelle inventé à partir de son poids est au mieux faux, au pire violent.
 
 Daylog ne le fait pas, et ne le fera pas.
 
-## Séparer l'identité des paramètres de calcul
+## Séparer la langue du calcul — et assumer ce que le calcul demande
 
 Deux choses sans rapport sont volontairement séparées dans le profil :
 
@@ -25,12 +25,44 @@ Deux choses sans rapport sont volontairement séparées dans le profil :
 |---|---|---|
 | `identity.address` | Comment l'app s'adresse à la personne | **Non, jamais** |
 | `identity.pronouns` | Pronoms d'usage | **Non, jamais** |
-| `body.calcBasis` | Base de calcul métabolique | Oui |
+| `identity.gender` | Référence des formules de dépense | Oui, et **uniquement là** |
+| `body.calcBasis` | Référence retenue, déduite du genre | Oui |
 | `body.bodyFatPct` | Masse grasse **mesurée** | Oui, si renseignée |
 
-L'identité de genre ne pilote que le vocabulaire. Les calculs utilisent une
-variable physiologique choisie explicitement, que l'on peut changer à tout
-moment sans que cela ne modifie la façon dont l'app parle à la personne.
+**Ce parti pris a changé en cours de route, et c'est une correction.** Les
+premières versions refusaient de poser la question du genre et présentaient à
+la place un choix de « variante de calcul », avec des libellés qui contournaient
+le mot. C'était maladroit sur deux plans : le détour se voyait, et il faisait
+porter à chacun un choix technique dont la réponse est évidente pour la plupart
+des gens.
+
+Les formules publiées **ont bien été calibrées séparément** sur des groupes de
+référence féminins et masculins, et cette différence physiologique est réelle.
+Daylog en tient donc compte, automatiquement, à partir d'une seule question — et
+cette question ne sert nulle part ailleurs.
+
+| Réponse | Référence retenue |
+|---|---|
+| Femme | constante féminine |
+| Homme | constante masculine |
+| Non binaire | **le milieu des deux**, en le disant |
+| Personne trans | **choix explicite**, avec transition progressive possible |
+| Pas de réponse | aucun calcul affiché |
+
+Deux cas ne se laissent pas ramener à l'une des deux références, et chacun est
+traité pour ce qu'il est :
+
+- **Non binaire** — on prend le milieu des deux constantes. Ce point milieu
+  n'est publié nulle part : il est présenté comme l'approximation qu'il est, et
+  le recalage sur les faits observés le corrigera de toute façon.
+- **Personne trans** — c'est le seul cas où le choix explicite vaut mieux qu'une
+  déduction. Qui suit une transition connaît son étape, son traitement et son
+  ancienneté mieux que n'importe quelle règle automatique. La référence peut
+  aussi glisser progressivement d'une constante à l'autre.
+
+Et une porte de sortie pour tout le monde : **la masse grasse mesurée l'emporte
+sur toute référence**. C'est une mesure, pas une catégorie, et elle ne pose
+aucune question.
 
 ## Les trois voies de calcul
 
@@ -56,14 +88,15 @@ impédance, pince à plis cutanés, DEXA). Jamais estimé.
 ### 2. Mifflin-St Jeor — la voie par défaut
 
 ```
-Base commune = (10 × poids) + (6,25 × taille) − (5 × âge)
-Variante A   = base commune + 5
-Variante B   = base commune − 161
+Base commune       = (10 × poids) + (6,25 × taille) − (5 × âge)
+Référence masculine = base commune + 5
+Référence féminine  = base commune − 161
+Milieu (non binaire) = base commune − 78
 ```
 
-Ces deux constantes viennent des deux groupes de population sur lesquels la
-formule a été calibrée. Daylog demande explicitement laquelle utiliser, avec une
-explication, plutôt que de la déduire d'une case « homme / femme ».
+Les deux constantes viennent des groupes de population sur lesquels la formule a
+été calibrée. Daylog en déduit celle à utiliser depuis la réponse sur le genre,
+sans question supplémentaire.
 
 Marge d'erreur : **environ 10 %, pour tout le monde**, y compris pour les
 personnes correspondant exactement aux groupes de calibration. C'est une
@@ -92,6 +125,22 @@ est simplement honnête sur le fait qu'il existe un entre-deux.
 Cette option existe parce que **ne pas la proposer reviendrait à forcer un choix
 binaire**. Elle n'est jamais activée d'office, et le choix manuel reste
 disponible pour qui préfère ne pas se poser la question.
+
+## Le garde-fou qui compte le plus : jamais sous le métabolisme de base
+
+Quelle que soit la vitesse choisie, **la cible ne descend jamais sous ce que le
+corps dépense au repos**. Le déficit est par ailleurs plafonné à 500 kcal par
+jour dans les deux sens.
+
+Ce n'est pas un réglage prudent, c'est une limite du produit. Proposer de manger
+moins que son métabolisme de base ne relève pas du suivi ; et au-delà de
+500 kcal d'écart on ne perd pas plus vite — on perd davantage de muscle, et on
+tient moins longtemps. Quand le plancher entre en jeu, l'écran le dit : une
+cible silencieusement relevée ressemblerait à un bug.
+
+Dans le même esprit, aucun libellé d'objectif ne classe la personne. Pas de
+« sèche », pas de « perte agressive » : une vitesse, et ce qu'elle représente
+par semaine. Un test vérifie l'absence de ce vocabulaire.
 
 ## Le garde-fou : la réalité l'emporte sur la formule
 

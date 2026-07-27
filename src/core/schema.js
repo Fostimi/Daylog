@@ -102,6 +102,11 @@ export function createProfile() {
       // sauf demande explicite. Ce n'est pas un mode degrade, c'est la base.
       address: 'neutral', // 'neutral' | 'feminine' | 'masculine'
       pronouns: null,
+      // Demande uniquement si la personne suit son alimentation, et utilise
+      // uniquement la : les formules de depense au repos ont ete calibrees
+      // separement sur des groupes de reference feminins et masculins.
+      // 'woman' | 'man' | 'nonbinary' | 'trans'
+      gender: null,
     },
     body: {
       birthYear: null,
@@ -125,6 +130,9 @@ export function createProfile() {
       bodyFatMeasuredAt: null,
     },
     goals: {
+      // Suivre un objectif est un choix a part entiere : sans lui, Daylog
+      // affiche ce que le corps depense et s'arrete la.
+      hasGoal: null, // true | false | null (pas repondu)
       weight: null, // 'maintain' | 'lose-slow' | 'lose' | 'gain-slow' | 'gain'
       // Demande separement de la mobilite, et jamais deduit d'elle : une
       // personne en fauteuil peut etre sportive de haut niveau.

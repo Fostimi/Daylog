@@ -639,12 +639,18 @@ body {
   line-height: 1.55;
 }
 
+/* `min-width: 0` : les navigateurs donnent aux `fieldset` un `min-width:
+   min-content` qui les empeche de retrecir. Invisible a taille de texte
+   normale, il faisait deborder le profil de six pixels a 200 % -- une longue
+   legende suffisait a le declencher. */
 .onb-fieldset {
+  min-width: 0;
   border: 0;
   margin-bottom: 1rem;
 }
 
 .onb-legend {
+  overflow-wrap: break-word;
   font-size: 0.9375rem;
   font-weight: 550;
   margin-bottom: 0.625rem;
@@ -1634,4 +1640,24 @@ body {
 }
 .suggestion.is-new {
   font-style: italic;
+}
+
+/* La ligne entiere ouvre la correction : c'est le geste le plus frequent. */
+.meal-item-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0.25rem 0;
+  cursor: pointer;
+}
+.meal-item-edit {
+  color: var(--accent-text);
+}
+.meal-item-main:hover .meal-item-label {
+  color: var(--accent-text);
 }

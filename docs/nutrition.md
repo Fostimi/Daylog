@@ -29,10 +29,19 @@ Le mode détaillé (micronutriments, treize champs par repas) viendra **après**
 seulement une fois qu'on saura ce que la saisie rapide donne à l'usage. Les
 construire ensemble doublerait la surface avant de savoir si la première tient.
 
-## Décision 2 — Une petite base d'aliments, embarquée
+## Décision 2 — Une base d'aliments embarquée, et pas seulement omnivore
 
-Environ **80 aliments de base** — pâtes, riz, farine, œuf, poulet, bœuf, lait,
-pain, huile, légumes courants — livrés avec le module.
+Environ **130 aliments** livrés avec le module : féculents, viandes, poissons,
+œufs et laitages, légumes, fruits, matières grasses, boissons — **et une part
+entière de protéines végétales, boissons végétales, céréales sans gluten,
+graines et oléagineux**.
+
+Cette dernière part n'est pas un supplément. Une application de suivi
+alimentaire qui ne connaît que le poulet et le fromage est inutilisable pour qui
+mange végétarien, vegan ou sans gluten — et l'inutilisabilité se découvre au
+premier repas, c'est-à-dire exactement au moment où l'on décide de rester ou
+non. Le surcoût est de quelques kilo-octets sur un fichier qui n'est téléchargé
+que par les personnes qui suivent leur alimentation.
 
 Ce qui justifie l'écart au principe « rien n'est embarqué » : une bibliothèque
 vide au premier jour rend le module inutilisable pendant la semaine où l'on
@@ -44,7 +53,12 @@ et sans réseau elle ne peut pas être consultée à distance. C'est non.
 
 **Ces valeurs sont indicatives et modifiables.** Le riz d'une marque n'est pas
 le riz d'une table de composition. La base amorce, elle ne fait pas autorité, et
-l'écran doit le dire une fois — pas à chaque ligne.
+l'écran le dit une fois — pas à chaque ligne.
+
+Un contrôle automatique surveille la table : pas de doublon, pas d'unité
+incohérente, et l'énergie annoncée doit rester cohérente avec les
+macronutriments. L'alcool en est exempté : l'éthanol apporte 7 kcal/g sans être
+un macronutriment, et c'est la table qui a raison.
 
 ## Décision 3 — Deux niveaux de mémoire
 
@@ -134,6 +148,37 @@ Et côté aliments, deux règles vérifiées par les tests :
 - **la recherche ignore casse, accents et ligatures.** Taper « oeuf » doit
   trouver « Œuf » : `NFD` ne décompose pas la ligature, et le cas est fréquent en
   français (œuf, bœuf, cœur, sœur).
+
+## Décision 6 — Corriger, pas supprimer
+
+Changer 80 g en 100 g obligeait à supprimer la ligne puis à tout ressaisir. Pour
+la correction la plus fréquente de toutes, c'était absurde.
+
+La ligne entière est désormais un bouton qui rouvre la saisie, quantité et unité
+préremplies. Elle est remplacée **en place** : une correction ne doit pas envoyer
+la ligne à la fin du repas.
+
+Cas limite traité : une entrée dont l'aliment a été archivé reste modifiable. Ses
+valeurs pour 100 g sont reconstituées depuis ce qu'elle porte — l'opération
+exactement inverse de la saisie, qui ne perd rien. Une entrée décrit un repas qui
+a bien eu lieu ; elle ne doit pas devenir intouchable parce qu'on a rangé sa
+bibliothèque.
+
+## Décision 7 — L'objectif est un choix, et il se refuse
+
+« Veux-tu suivre un objectif de poids ? » est une question à part entière. Sans
+objectif, Daylog affiche ce que le corps dépense et s'arrête là — ce qui est
+déjà un suivi complet, et le seul qui convienne à qui ne veut pas de cible.
+
+Et pour rendre une cible concrète, une section repliée répond à « 2300 kcal, ça
+ressemble à quoi dans une journée ? » en la répartissant sur les quatre moments.
+Deux sources, dans cet ordre :
+
+1. **la répartition réelle** des journées déjà notées, dès qu'il y en a sept ;
+2. à défaut, une répartition courante, annoncée comme telle.
+
+La première vaut toujours mieux : quelqu'un qui ne déjeune jamais n'a que faire
+d'un modèle qui lui attribue un tiers de ses calories à midi.
 
 ## Ce qui reste
 

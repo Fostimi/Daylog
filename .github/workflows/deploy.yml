@@ -54,7 +54,11 @@ jobs:
     needs: verifier
     runs-on: ubuntu-latest
     steps:
+      # Historique complet : le numero de version est le nombre reel de
+      # modifications du depot, et un clone superficiel le ramenerait a 1.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 22

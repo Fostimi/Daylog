@@ -29,7 +29,9 @@ import { createListItem, activeItems } from '../../core/ids.js';
 import { formatNumber } from '../../core/i18n.js';
 import {
   UNITS,
+  REFERENCE_GRAMS,
   normalize,
+  toGrams,
   unitsFor,
   macrosFor,
   createEntry,
@@ -82,6 +84,10 @@ export async function render({ store }) {
   let quantity = null;
   let unit = 'g';
   let creating = null; // brouillon d'aliment personnel
+  // Entree en cours de modification. Sans elle, changer 80 g en 100 g obligeait
+  // a supprimer la ligne puis a tout ressaisir -- un geste absurde pour la
+  // correction la plus frequente de toutes.
+  let editing = null;
 
   function data() {
     return store.get('nutrition') || {};
@@ -130,10 +136,20 @@ export async function render({ store }) {
     const entry = createEntry(picked, { quantity, unit, slot });
     if (!entry) return;
     await touchFood(picked);
+
+    const replaced = editing;
     picked = null;
     activeSlot = null;
     quantity = null;
     query = '';
+    editing = null;
+
+    if (replaced) {
+      // On remplace en place pour garder l'ordre du repas : une correction ne
+      // doit pas envoyer la ligne a la fin de la liste.
+      write(entries().map((e) => (e.id === replaced.id ? { ...entry, id: replaced.id } : e)));
+      return;
+    }
     addEntries([entry]);
   }
 
@@ -205,7 +221,10 @@ export async function render({ store }) {
       ageYears: body.birthYear ? new Date().getFullYear() - body.birthYear : null,
       body,
       activity: goals.activity,
-      goal: goals.weight,
+      // Sans objectif declare, on affiche ce que le corps depense et rien de
+      // plus : c'est deja un suivi complet, et le seul qui convienne a qui ne
+      // veut pas de cible.
+      goal: goals.hasGoal === true ? goals.weight : null,
     });
     if (!needs.target) return null;
     return {
@@ -240,15 +259,26 @@ export async function render({ store }) {
     ));
   }
 
-  /** Une ligne de saisie deja enregistree. */
+  /**
+   * Une ligne deja enregistree.
+   *
+   * La ligne entiere est un bouton : corriger une quantite est le geste le plus
+   * frequent, il ne doit pas demander de viser une cible de 2 mm.
+   */
   function entryRow(entry) {
     const unitLabel = UNITS[entry.unit]?.label || '';
     return el('div', { class: 'meal-item' }, [
-      el('div', { class: 'meal-item-main' }, [
+      el('button', {
+        type: 'button',
+        class: 'meal-item-main',
+        'aria-label': `Modifier ${entry.label}`,
+        onClick: () => startEdit(entry),
+      }, [
         el('span', { class: 'meal-item-label' }, entry.label),
-        el('span', { class: 'meal-item-qty' },
-          `${formatNumber(entry.quantity, { digits: entry.quantity % 1 ? 1 : 0 })} ${unitLabel}`
-        ),
+        el('span', { class: 'meal-item-qty' }, [
+          `${formatNumber(entry.quantity, { digits: entry.quantity % 1 ? 1 : 0 })} ${unitLabel}`,
+          el('span', { class: 'meal-item-edit' }, ' · modifier'),
+        ]),
       ]),
       el('span', { class: 'meal-item-kcal' }, `${formatNumber(entry.kcal)} kcal`),
       el('button', {
@@ -258,6 +288,49 @@ export async function render({ store }) {
         onClick: () => removeEntry(entry.id),
       }, '×'),
     ]);
+  }
+
+  /**
+   * Reprend une entree pour la corriger.
+   *
+   * On retrouve l'aliment d'origine quand il existe encore ; sinon on repart de
+   * ce que l'entree porte elle-meme. Une entree dont l'aliment a ete archive
+   * doit rester modifiable : elle decrit un repas qui a bien eu lieu.
+   */
+  function startEdit(entry) {
+    const source =
+      allFoods().find((f) => f.id === entry.foodId) ||
+      // Reconstitution a partir des valeurs figees : on remonte au « pour 100 g ».
+      rebuildFood(entry);
+    if (!source) return;
+    editing = entry;
+    picked = source;
+    activeSlot = entry.slot;
+    quantity = entry.quantity;
+    unit = entry.unit;
+    draw();
+  }
+
+  /**
+   * Reconstitue un aliment a partir d'une entree.
+   *
+   * Sert quand l'aliment d'origine a disparu de la bibliotheque. On divise les
+   * valeurs figees par la quantite pour revenir a la reference : c'est
+   * exactement l'operation inverse de la saisie, et elle ne perd rien.
+   */
+  function rebuildFood(entry) {
+    const grams = toGrams(entry.quantity, entry.unit, { unitGrams: {} });
+    if (!grams) return null;
+    const ratio = REFERENCE_GRAMS / grams;
+    const scale = (v) => (typeof v === 'number' ? Math.round(v * ratio * 10) / 10 : null);
+    return {
+      id: entry.foodId || null,
+      label: entry.label,
+      kcal: scale(entry.kcal),
+      protein: scale(entry.protein),
+      carbs: scale(entry.carbs),
+      fat: scale(entry.fat),
+    };
   }
 
   /** Champ de recherche et resultats, pour un moment donne. */
@@ -351,7 +424,7 @@ export async function render({ store }) {
       class: 'btn btn-primary btn-sm',
       disabled: !quantity,
       onClick: () => confirmPick(slot),
-    }, 'Ajouter');
+    }, editing ? 'Enregistrer' : 'Ajouter');
 
     const field = numberField({
       id: 'food-qty',
@@ -403,6 +476,7 @@ export async function render({ store }) {
           onClick: () => {
             picked = null;
             activeSlot = null;
+            editing = null;
             draw();
           },
         }, 'Annuler'),

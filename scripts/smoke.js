@@ -209,6 +209,19 @@ await page.locator('#theme-food').check();
 await page.locator('.onb-actions .btn-primary').click(); // -> mobilite
 await scanAccents();
 await page.locator('#mobility-wheelchair').check();
+await page.locator('.onb-actions .btn-primary').click(); // -> genre
+await scanAccents();
+// La question de genre ne s'affiche que parce que le suivi alimentaire a ete
+// choisi juste avant : elle ne sert qu'aux calculs de depense au repos.
+check(
+  'le genre n est demande que pour les calculs de nutrition',
+  (await page.locator('#onb-title').textContent()).includes('calculs')
+);
+check(
+  'une personne trans y choisit elle-meme sa reference',
+  (await page.locator('#gender-trans').count()) === 1
+);
+await page.locator('#gender-woman').check();
 await page.locator('.onb-actions .btn-primary').click(); // -> montre
 await scanAccents();
 await page.locator('#wearable-garmin').check();
@@ -603,6 +616,57 @@ check(
   (await page.locator('.btn-danger').innerText()).includes('Effacer')
 );
 
+// Le genre pilote la reference de calcul, sans que personne ait a choisir.
+const profileGender = (await readStore('meta')).find((m) => m.key === 'profile')?.value;
+check(
+  'le genre declare a la presentation est enregistre',
+  profileGender?.identity?.gender === 'woman'
+);
+check(
+  'la reference de calcul en est deduite, sans question supplementaire',
+  profileGender?.body?.calcBasis === 'b',
+  `calcBasis = ${profileGender?.body?.calcBasis}`
+);
+check(
+  'le profil ne propose aucun choix de variante a qui n en a pas besoin',
+  (await page.locator('#p-basis-b').count()) === 0
+);
+check(
+  'la mesure reste proposee a tout le monde',
+  (await page.locator('#p-lean').count()) === 1
+);
+
+// Une personne trans, elle, choisit -- et peut faire glisser la reference.
+await page.locator('#p-gender-trans').check();
+await page.waitForTimeout(400);
+check(
+  'une personne trans choisit elle-meme sa reference',
+  (await page.locator('#p-basis-interpolated').count()) === 1
+);
+await page.locator('#p-basis-interpolated').check();
+await page.waitForTimeout(300);
+check(
+  'et le sens de la transition lui est demande',
+  (await page.locator('#p-basis-direction-mtf').count()) === 1 &&
+    (await page.locator('#p-basis-start').count()) === 1
+);
+await page.locator('#p-gender-woman').check();
+await page.waitForTimeout(400);
+
+// L'objectif est un choix a part entiere, et il se refuse.
+check(
+  'suivre un objectif se refuse',
+  (await page.locator('#p-has-goal-no').count()) === 1
+);
+await page.locator('#p-has-goal-no').check();
+await page.waitForTimeout(400);
+const sansObjectif = await page.locator('.card', { hasText: 'Tes besoins estimés' }).innerText();
+check(
+  'sans objectif, aucune cible n est affichee',
+  !sansObjectif.includes('Cible'),
+  sansObjectif.split('\n').slice(0, 4).join(' / ')
+);
+
 // ---------------------------------------------------------------- cycle
 //
 // Le module cycle ne s'active pas par une case a cocher mais par une reponse a
@@ -907,6 +971,23 @@ check(
   typeof nutritionDay?.items?.[0]?.kcal === 'number' &&
     typeof nutritionDay?.items?.[0]?.foodId === 'string',
   'corriger l aliment plus tard ne doit pas reecrire le passe'
+);
+
+// Corriger une quantite ne doit pas obliger a supprimer puis tout ressaisir.
+await midi.locator('.meal-item-main').first().click();
+await page.waitForSelector('#food-qty');
+check(
+  'une ligne se corrige au lieu de se supprimer',
+  (await page.locator('#food-qty').inputValue()) === '80'
+);
+await page.locator('#food-qty').fill('100');
+await page.locator('.qty-form .btn-primary').click();
+await page.waitForTimeout(2400);
+const corrige = (await readStore('days')).find((d) => d.modules?.nutrition)?.modules?.nutrition;
+check(
+  'la correction remplace la ligne en place',
+  corrige?.items?.length === 1 && corrige.items[0].quantity === 100,
+  JSON.stringify(corrige?.items?.[0])
 );
 
 const sumNutrition = (await readStore('summaries')).find((s) => typeof s.kcal === 'number');

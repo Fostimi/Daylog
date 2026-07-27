@@ -492,3 +492,73 @@ repliées : on y vient chercher une réponse, pas lire un manuel.
 Une exception assumée : l'avertissement « pas un dispositif médical » reste
 affiché en clair sur le bilan. Celui-là n'est pas une explication, c'est une
 limite — et une limite se rappelle.
+
+## Décision 22 — Le genre entre dans un calcul, et un seul
+
+Revirement assumé par rapport à la décision 9, et il vaut la peine d'être écrit
+plutôt que corrigé en silence.
+
+Le principe de départ était : **l'identité de genre ne pilote aucun calcul**.
+Il tenait pour l'essentiel de l'application, et il tient toujours. Mais appliqué
+aux formules de dépense au repos, il produisait un détour maladroit : on
+présentait un choix de « variante de calcul » avec des libellés qui contournaient
+le mot « genre ». Le détour se voyait — et il faisait porter à chacun un choix
+technique dont la réponse est évidente pour la plupart des gens.
+
+Les formules publiées ont bien été calibrées séparément sur des groupes de
+référence féminins et masculins. Cette différence physiologique est réelle.
+Daylog pose donc **une** question de genre, s'en sert **uniquement** pour choisir
+la référence, et le dit à l'endroit où il la pose.
+
+Ce que ça change concrètement :
+
+- **la plupart des gens n'ont plus rien à choisir** — pas de case technique, pas
+  d'euphémisme, pas d'occasion de se sentir mal rangé ;
+- **non binaire** prend le milieu des deux constantes, présenté comme
+  l'approximation qu'il est ;
+- **personne trans** ouvre un choix explicite, avec transition progressive
+  possible. C'est le seul cas où choisir vaut mieux que déduire : qui suit une
+  transition connaît son étape mieux que n'importe quelle règle ;
+- **la masse grasse mesurée l'emporte sur tout** — une mesure, pas une catégorie.
+
+La question n'est posée qu'à qui suit son alimentation. Poser une question
+intime pour n'en rien faire serait indéfendable.
+
+## Décision 23 — Un test qui cherche ce qu'on n'a pas prévu
+
+`npm run smoke` suit un parcours écrit à l'avance : il prouve que ce qu'on a
+prévu fonctionne. `npm run stress` fait l'inverse — il malmène l'application
+pour trouver ce qu'on n'avait pas prévu.
+
+Ce qu'il inspecte, à chaque écran et après chaque séquence : erreurs
+JavaScript, identifiants HTML en double, débordement horizontal (y compris à
+200 % de taille de texte), survie des données à un rechargement, cibles
+tactiles trop petites, et tenue d'un an d'historique.
+
+Il navigue en zigzag dans la présentation — avancer, reculer, ré-avancer —,
+saisit des valeurs limites (zéro, 99999), voyage vingt jours en arrière puis
+revient, et vérifie qu'on ne peut pas noter une journée qui n'a pas eu lieu.
+
+Trois trouvailles dès la première exécution, dont une vraie : les `fieldset`
+reçoivent des navigateurs un `min-width: min-content` qui les empêche de
+rétrécir, et le profil débordait de six pixels à 200 % de taille de texte. Rien
+d'autre ne l'aurait signalé.
+
+Quand il trouve un débordement, il **nomme l'élément coupable**. « Ça déborde de
+6 px » envoie chercher pendant vingt minutes ; « `fieldset.onb-fieldset` déborde
+de 6 px » se corrige tout de suite.
+
+## Décision 24 — Un numéro de version qui veut dire quelque chose
+
+`0.MINEUR.CORRECTIF`, où le correctif est le **nombre réel de modifications du
+dépôt** — pas un compteur décoratif qu'on incrémente au jugé. Deux versions
+différentes signifient donc qu'il s'est réellement passé quelque chose entre
+les deux, et l'écart entre deux numéros dit combien.
+
+Il est calculé à la construction depuis l'historique git, affiché en bas de
+« Comment ça marche », et **tamponné dans chaque sauvegarde**. C'est là qu'il
+sert vraiment : devant un fichier qui se comporte mal, la première question est
+toujours « il vient d'où, celui-là ? ».
+
+Le mineur reste dans `package.json` et se lève à la main aux étapes qui comptent :
+un module qui arrive, un changement de forme des données.
