@@ -11,7 +11,7 @@ plus intime de l'application : il doit donc être le plus transparent.
 
 Aucune intelligence artificielle n'intervient. Tout ce qui suit tient en une
 poignée d'additions et de moyennes, lisibles dans
-[`src/core/cycle.js`](../src/core/cycle.js) et vérifiées par 44 tests.
+[`src/core/cycle.js`](../src/core/cycle.js) et vérifiées par 50 tests.
 
 ## Les quatre règles
 

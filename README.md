@@ -104,6 +104,7 @@ Ils tranchent les arbitrages, dans cet ordre :
   pourquoi l'identité de genre n'entre dans aucune d'elles
 - [Suivi du cycle](docs/cycle.md) — les calculs, et ce que Daylog refuse de
   calculer
+- [Nutrition](docs/nutrition.md) — les décisions de conception, avant les écrans
 
 ## Sauvegardes
 
