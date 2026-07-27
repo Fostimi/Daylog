@@ -114,6 +114,14 @@ export const MAX_HALF_WIDTH = 20;
 /** Un jour de cycle au-dela de ce compte signale un suivi interrompu. */
 export const STALE_CYCLE_DAY = 90;
 
+/**
+ * Duree de la periode « avant les regles », en jours.
+ *
+ * Sert uniquement a situer la personne dans son cycle en langage courant. Ce
+ * n'est PAS une estimation d'ovulation : voir `cyclePhase` et docs/cycle.md.
+ */
+export const PREMENSTRUAL_DAYS = 14;
+
 /** Le flux enregistre pour une journee, ou `null` si rien n'a ete note. */
 export function flowOf(row) {
   const value = row?.flow;
@@ -237,44 +245,163 @@ export function cycleDay(lastStart, date) {
 }
 
 /**
+ * Episodes de regles : jours saignants consecutifs, tolerance comprise.
+ *
+ * `upTo` (une cle de jour) sert a reconnaitre l'episode EN COURS. Ses regles
+ * n'etant pas finies, sa duree n'est pas encore connue : elle ne doit pas
+ * entrer dans la moyenne, sinon celle-ci baisse chaque fois qu'on ouvre
+ * l'application le premier jour.
+ */
+export function periodEpisodes(rows = [], { upTo = null } = {}) {
+  const sorted = [...(rows || [])]
+    .filter((r) => r && isValidKey(r.date) && bleeds(r))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  const episodes = [];
+  for (const row of sorted) {
+    const last = episodes[episodes.length - 1];
+    if (last && diffDays(last.end, row.date) <= MAX_GAP) {
+      last.end = row.date;
+      last.days = diffDays(last.start, last.end) + 1;
+    } else {
+      episodes.push({ start: row.date, end: row.date, days: 1 });
+    }
+  }
+
+  if (upTo && isValidKey(upTo)) {
+    const last = episodes[episodes.length - 1];
+    if (last && diffDays(last.end, upTo) >= 0 && diffDays(last.end, upTo) <= MAX_GAP) {
+      last.ongoing = true;
+    }
+  }
+  return episodes;
+}
+
+/** Duree moyenne des regles, sur les episodes termines. */
+export function periodStats(rows = [], { upTo = null } = {}) {
+  const episodes = periodEpisodes(rows, { upTo });
+  const finished = episodes.filter((e) => !e.ongoing).slice(-RECENT_CYCLES);
+  const days = finished.map((e) => e.days);
+  return {
+    episodes,
+    count: days.length,
+    average: days.length ? Math.round(days.reduce((a, b) => a + b, 0) / days.length) : null,
+    ongoing: episodes.find((e) => e.ongoing) || null,
+  };
+}
+
+/**
+ * Duree annoncee par la personne, si elle est exploitable.
+ *
+ * Le cahier des charges demande de pouvoir donner « la duree environante entre
+ * chaque cycle » : c'est ce qui evite d'attendre deux cycles complets -- soit
+ * deux mois -- avant que l'application serve a quelque chose.
+ *
+ * Ce garde-fou est celui du CALCUL, et il est volontairement plus large que
+ * celui de la saisie (voir `modules/profile-options.js`) : une valeur peut
+ * arriver d'une sauvegarde importee, ecrite par une version anterieure ou
+ * modifiee a la main dans le fichier JSON.
+ */
+export function usableDeclared(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return null;
+  return n >= MIN_CYCLE && n <= MAX_CYCLE ? n : null;
+}
+
+/**
  * Repere de prochaines regles.
  *
  * Renvoie toujours un objet, avec un `reason` quand il n'y a rien a afficher :
  * l'ecran doit pouvoir expliquer *pourquoi* il ne dit rien, plutot que de
  * laisser un vide que chacun interprete comme il veut.
  *
+ *   off           repere refuse dans le profil
  *   suppressed    cycle declare suspendu : une moyenne ne predirait rien
- *   not-enough    moins de deux cycles complets
+ *   not-enough    ni deux cycles complets, ni duree declaree
  *   too-variable  cycles trop disperses pour qu'une fourchette ait du sens
+ *
+ * `source` dit sur quoi repose le repere : 'observed' (les cycles reellement
+ * enregistres) ou 'declared' (la duree annoncee a la premiere ouverture, en
+ * attendant d'avoir mieux). L'observe l'emporte des qu'il existe : une duree
+ * declaree est un point de depart, pas une reference permanente.
  *
  * `exact` distingue les deux facons d'annoncer : une date quand les cycles sont
  * reguliers, une fourchette sinon. Un cycle declare irregulier n'annonce jamais
  * de date, meme si la moyenne parait stable -- la personne sait mieux que
- * l'application ce que valent ses trois derniers cycles.
+ * l'application ce que valent ses trois derniers cycles. Une duree seulement
+ * declaree n'annonce jamais de date non plus.
  */
-export function predictNextPeriod(stats, { mode = null } = {}) {
+export function predictNextPeriod(stats, { mode = null, declared = null, forecast = true } = {}) {
+  if (forecast === false) return { reason: 'off' };
   if (mode === 'suppressed') return { reason: 'suppressed' };
-  if (!stats || stats.count < MIN_CYCLES_FOR_PREDICTION || !stats.lastStart) {
+
+  const observed = Boolean(stats && stats.count >= MIN_CYCLES_FOR_PREDICTION && stats.lastStart);
+  const declaredLength = usableDeclared(declared);
+
+  if (!observed && (!declaredLength || !stats?.lastStart)) {
     return { reason: 'not-enough', missing: MIN_CYCLES_FOR_PREDICTION - (stats?.count || 0) };
   }
 
   // La demi-largeur part de la dispersion observee, avec un plancher de deux
   // jours : meme trois cycles identiques ne justifient pas d'annoncer une date
-  // au jour pres. Un cycle declare irregulier elargit le plancher.
+  // au jour pres. Un cycle declare irregulier elargit le plancher, et une duree
+  // seulement annoncee -- jamais verifiee par les faits -- plus encore.
   const floor = mode === 'irregular' ? 3 : 2;
-  const halfWidth = Math.max(floor, Math.ceil(stats.spread / 2));
+  const average = observed ? stats.average : declaredLength;
+  const halfWidth = observed
+    ? Math.max(floor, Math.ceil(stats.spread / 2))
+    : Math.max(floor + 2, 4);
+
   if (halfWidth > MAX_HALF_WIDTH) return { reason: 'too-variable', spread: stats.spread };
 
-  const date = addDays(stats.lastStart, stats.average);
+  const date = addDays(stats.lastStart, average);
   return {
     date,
     from: addDays(date, -halfWidth),
     to: addDays(date, halfWidth),
-    average: stats.average,
+    average,
     halfWidth,
-    n: stats.count,
-    exact: halfWidth <= 2 && mode !== 'irregular',
+    n: observed ? stats.count : 0,
+    source: observed ? 'observed' : 'declared',
+    exact: observed && halfWidth <= 2 && mode !== 'irregular',
   };
+}
+
+/**
+ * Ou en est-on dans le cycle.
+ *
+ * CE QUE CETTE FONCTION NE FAIT PAS, ET NE FERA PAS : estimer une ovulation ou
+ * une fenetre de fertilite. On ne connait que des dates de saignement ; en
+ * deduire une ovulation, c'est fabriquer une information medicale a partir de
+ * rien. Des gens s'en serviraient comme moyen de contraception -- c'est la
+ * methode du calendrier, dont l'echec est frequent. Daylog n'est pas un
+ * dispositif medical et ne jouera pas ce role.
+ *
+ * D'ou aussi le vocabulaire : « avant les regles » et non « phase luteale ».
+ * Nommer les phases cliniques affirmerait qu'une ovulation a eu lieu, ce qui
+ * est faux pour une partie des cycles (contraception hormonale, SOPK,
+ * perimenopause, post-partum) -- et l'affirmer a ces personnes serait a la fois
+ * inexact et blessant.
+ *
+ * `source` vaut 'observed' quand la reponse vient d'un flux effectivement
+ * enregistre ce jour-la, 'estimated' quand elle est deduite d'une moyenne.
+ */
+export function cyclePhase({ stats, prediction, date, flow = null } = {}) {
+  if (typeof flow === 'number' && flow > 0) {
+    return { id: 'period', label: 'Règles', source: 'observed' };
+  }
+  if (!stats?.lastStart || !isValidKey(date)) return { id: 'unknown', source: null };
+
+  const day = cycleDay(stats.lastStart, date);
+  if (day === null) return { id: 'unknown', source: null };
+  if (!prediction?.date) return { id: 'running', label: 'Cycle en cours', source: 'observed', day };
+
+  const toNext = diffDays(date, prediction.date);
+  if (toNext <= 0) return { id: 'expected', label: 'Règles attendues', source: 'estimated', day };
+  if (toNext <= PREMENSTRUAL_DAYS) {
+    return { id: 'before', label: 'Avant les règles', source: 'estimated', day, toNext };
+  }
+  return { id: 'after', label: 'Après les règles', source: 'estimated', day, toNext };
 }
 
 /**

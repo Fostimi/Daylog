@@ -62,3 +62,32 @@ export const CYCLE = [
   { id: 'suppressed', label: 'Oui, mais suspendu', hint: 'Contraception, traitement' },
   { id: 'none', label: 'Non, pas concerné' },
 ];
+
+/**
+ * Bornes des durees qu'on accepte de se voir saisir.
+ *
+ * Elles vivent ici, avec les autres questions de profil, et non dans
+ * `core/cycle.js` : les deux ecrans qui les utilisent sont telecharges par tout
+ * le monde, y compris par qui repondra « non, pas concerne ». Y importer le
+ * calcul de cycle ferait payer 2 Ko a ces personnes pour une fonctionnalite
+ * qu'elles n'auront jamais -- exactement ce que le decoupage en modules evite
+ * partout ailleurs.
+ *
+ * Le noyau garde ses propres garde-fous, plus larges : ceux-ci disent ce qu'on
+ * laisse taper, ceux-la ce qu'un calcul accepte de prendre au serieux.
+ */
+export const DECLARED_CYCLE_RANGE = [15, 90];
+export const DECLARED_PERIOD_RANGE = [1, 15];
+
+/**
+ * Nettoie une duree saisie a la main.
+ *
+ * Une valeur hors bornes est refusee plutot que ramenee au plus proche :
+ * corriger silencieusement une saisie reviendrait a inventer une donnee.
+ */
+export function sanitizeDeclared(value, [min, max]) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  const rounded = Math.round(n);
+  return rounded >= min && rounded <= max ? rounded : null;
+}

@@ -596,9 +596,159 @@ check(
   (await page.locator('.btn-danger').innerText()).includes('Effacer')
 );
 
+// ---------------------------------------------------------------- cycle
+//
+// Le module cycle ne s'active pas par une case a cocher mais par une reponse a
+// une question posee a tout le monde. On verifie ici tout le chemin : declarer
+// un cycle, saisir, obtenir un repere, puis pouvoir tout desactiver.
+
+await page.locator('#p-cycle-regular').check();
+await page.waitForTimeout(400);
+check(
+  'declarer un cycle ouvre les questions de duree',
+  (await page.locator('#p-cycle-length').count()) === 1
+);
+check(
+  'le repere de prochaines regles peut etre refuse',
+  (await page.locator('#p-cycle-forecast-no').count()) === 1
+);
+
+await page.locator('#p-cycle-length').fill('28');
+await page.waitForTimeout(400);
+const capsAfterCycle = (await readStore('meta')).find((m) => m.key === 'capabilities')?.value;
+check('le cycle declare est enregistre', capsAfterCycle?.cycle === 'regular');
+check('la duree habituelle est enregistree', capsAfterCycle?.cycleLength === 28);
+
+const dupIdsCycle = await page.evaluate(() => {
+  const seen = new Set();
+  const dups = [];
+  for (const node of document.querySelectorAll('[id]')) {
+    if (seen.has(node.id)) dups.push(node.id);
+    seen.add(node.id);
+  }
+  return dups;
+});
+check('aucun identifiant en double une fois le cycle declare', dupIdsCycle.length === 0, dupIdsCycle.join(', '));
+
 await navigate("Aujourd'hui");
 await page.waitForSelector('[data-slot]');
 check('on revient a sa journee', (await page.locator('[data-slot]').count()) === 3);
+
+await page.waitForSelector('.flow-btn');
+await scanAccents();
+check(
+  'le suivi de cycle apparait une fois declare',
+  (await page.locator('.flow-row').count()) === 1
+);
+check(
+  'aucune intensite n est pre-selectionnee',
+  (await page.locator('.flow-btn.is-selected').count()) === 0
+);
+check(
+  'le choix d intensite suit le motif radiogroup',
+  (await page.locator('.flow-row[role="radiogroup"]').count()) === 1 &&
+    (await page.locator('.flow-btn[role="radio"]').count()) === 5
+);
+check(
+  'un seul arret de tabulation pour les cinq intensites',
+  (await page.locator('.flow-btn[tabindex="0"]').count()) === 1
+);
+check(
+  'le premier jour ne se demande pas avant qu il y ait des regles',
+  (await page.locator('#cycle-start').count()) === 0
+);
+
+// « Moyen » : la journee devient un debut de cycle deduit, pas declare.
+await page.locator('.flow-btn[data-flow="3"]').click();
+await page.waitForTimeout(300);
+check(
+  'l intensite choisie est retenue',
+  (await page.locator('.flow-btn.is-selected').count()) === 1
+);
+check(
+  'le premier jour est deduit et reste corrigeable',
+  await page.locator('#cycle-start').isChecked()
+);
+
+await page.locator('.chip-toggle', { hasText: 'Crampes' }).click();
+await page.waitForTimeout(2400); // au-dela du debounce de sauvegarde
+const cycleDay = (await readStore('days')).find((d) => d.modules?.cycle)?.modules?.cycle;
+check('le flux est enregistre', cycleDay?.flow === 3, JSON.stringify(cycleDay));
+check('les symptomes sont enregistres', cycleDay?.symptoms?.includes('cramps') === true);
+check(
+  'une deduction ne s ecrit pas dans la fiche',
+  cycleDay?.cycleStart === undefined,
+  'rien n est enregistre que la personne n ait saisi'
+);
+
+const cycleText = await page.locator('.card', { hasText: 'Cycle' }).first().innerText();
+check(
+  'la duree declaree donne un repere sans attendre deux cycles',
+  /Prochaines règles/.test(cycleText),
+  cycleText.split('\n').find((l) => l.includes('Prochaines')) || cycleText.slice(0, 80)
+);
+check(
+  'le repere est annonce comme une fourchette, pas comme une date',
+  /entre le .+ et le /.test(cycleText)
+);
+check(
+  "l'avertissement contraception/conception accompagne le repere",
+  /ni un moyen de contraception, ni un outil de conception/.test(cycleText)
+);
+
+/*
+ * Deux verifications de fond, et non de forme.
+ *
+ * La premiere : Daylog n'estime aucune fertilite ni aucune phase clinique. En
+ * deduire a partir des seules dates de saignement fabriquerait une information
+ * medicale, et des gens s'en serviraient comme moyen de contraception.
+ *
+ * La seconde : le module ne suppose jamais le genre de qui l'utilise. Il
+ * s'active sur « as-tu un cycle menstruel a suivre ? », question posee a tout
+ * le monde -- jamais sur une case « sexe ».
+ */
+const pageText = await page.evaluate(() => document.body.innerText);
+const interdits = pageText.match(/fertilit|ovulat|lutéal|luteal|folliculaire|nidation/gi) || [];
+check(
+  'aucune estimation de fertilite ni de phase clinique',
+  interdits.length === 0,
+  interdits.join(', ')
+);
+const genres = pageText.match(/\bfemmes?\b|\bfilles?\b|\bmadame\b/gi) || [];
+check(
+  'le suivi de cycle ne suppose le genre de personne',
+  genres.length === 0,
+  genres.join(', ')
+);
+
+// Desactivable sans condition : c'est une exigence du cahier des charges.
+await navigate('Mes données');
+await page.waitForSelector('#mod-cycle');
+check(
+  'le suivi de cycle se desactive comme les autres',
+  (await page.locator('#mod-cycle').count()) === 1
+);
+await page.locator('#mod-cycle').uncheck();
+await page.waitForTimeout(300);
+await navigate("Aujourd'hui");
+await page.waitForSelector('[data-slot]');
+await page.waitForTimeout(300);
+check(
+  'desactive, il disparait de la journee sans rien effacer',
+  (await page.locator('.flow-row').count()) === 0 &&
+    (await readStore('days')).find((d) => d.modules?.cycle)?.modules?.cycle?.flow === 3
+);
+
+await navigate('Mes données');
+await page.waitForSelector('#mod-cycle');
+await page.locator('#mod-cycle').check();
+await page.waitForTimeout(300);
+await navigate("Aujourd'hui");
+await page.waitForSelector('.flow-btn');
+check(
+  'reactive, il retrouve ce qui avait ete note',
+  (await page.locator('.flow-btn.is-selected').count()) === 1
+);
 
 // ══════════════════════════════════════════════════ bilan
 

@@ -27,10 +27,13 @@ import { el, mount } from './dom.js';
 import { topbar } from './menu.js';
 import { barChart, lineChart } from './charts.js';
 import * as db from '../core/db.js';
-import { lastNDays, today, toDate } from '../core/date.js';
+import { addDays, lastNDays, today, toDate } from '../core/date.js';
 import { meanOf, round } from '../core/summary.js';
 import { buildInsights, RAPPEL_CORRELATION } from '../core/insights.js';
-import { formatDayShort, formatNumber } from '../core/i18n.js';
+import { formatDayShort, formatDayMonth, formatDayRange, formatNumber } from '../core/i18n.js';
+
+/** Profondeur d'historique du bilan de cycle : un cycle ne se lit pas sur 7 jours. */
+const CYCLE_HISTORY_DAYS = 400;
 
 const PERIODS = [
   { days: 7, label: '7 jours' },
@@ -41,10 +44,72 @@ const PERIODS = [
 export function createBilanView({ store, root, go, alert = null }) {
   let periodDays = 30;
 
+  /**
+   * Bilan du cycle.
+   *
+   * A part des autres : un cycle ne se lit pas sur la periode choisie en haut
+   * de l'ecran -- sept jours n'en contiennent aucun -- mais sur l'annee. La
+   * carte le dit explicitement plutot que de laisser croire que les chiffres
+   * suivent le selecteur.
+   *
+   * Le calcul n'est telecharge que si la personne suit un cycle : les autres ne
+   * paient rien.
+   */
+  async function cycleCard(end) {
+    const capabilities = store.getCapabilities() || {};
+    if (!capabilities.cycle) return null;
+
+    const [cycle, rows] = await Promise.all([
+      import('../core/cycle.js'),
+      db.getSummaries(addDays(end, -CYCLE_HISTORY_DAYS), end),
+    ]);
+
+    const stats = cycle.cycleStats(rows);
+    // Aucune date de regles notee : une carte pleine de tirets n'apprend rien.
+    if (!stats.starts.length) return null;
+
+    const periods = cycle.periodStats(rows, { upTo: end });
+    const prediction = cycle.predictNextPeriod(stats, {
+      mode: capabilities.cycle,
+      declared: capabilities.cycleLength,
+      forecast: capabilities.cycleForecast !== false,
+    });
+
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title' }, 'Cycle'),
+      el('dl', { class: 'facts' }, [
+        fact('Cycles complets', String(stats.lengths.length)),
+        fact('Durée moyenne', formatNumber(stats.average), 'jours'),
+        fact(
+          'Variation',
+          stats.count > 1 && stats.spread ? `${stats.min} à ${stats.max}` : '—',
+          stats.count > 1 && stats.spread ? 'jours' : ''
+        ),
+        fact('Règles', formatNumber(periods.average), 'jours'),
+      ]),
+
+      prediction.date &&
+        el('p', {},
+          prediction.exact
+            ? `Prochaines règles autour du ${formatDayMonth(prediction.date)}.`
+            : `Prochaines règles entre le ${formatDayRange(prediction.from, prediction.to)}.`
+        ),
+
+      el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        'Sur les douze derniers mois, et non sur la période choisie plus haut : ' +
+          'un cycle ne se lit pas sur sept jours. Ce sont des repères calculés sur ' +
+          'ce que tu as noté, ni un moyen de contraception, ni un outil de conception.'
+      ),
+    ]);
+  }
+
   async function draw() {
     const end = today(store.getSettings().dayStartHour || 0);
     const dates = lastNDays(periodDays, end);
-    const rows = await db.getSummaries(dates[0], end);
+    const [rows, cycleBlock] = await Promise.all([
+      db.getSummaries(dates[0], end),
+      cycleCard(end).catch(() => null),
+    ]);
 
     // On aligne les resumes sur la suite complete des jours : les journees non
     // suivies deviennent des trous, pas des zeros.
@@ -100,6 +165,8 @@ export function createBilanView({ store, root, go, alert = null }) {
               'zéros : une moyenne ne décrit que ce que tu as réellement noté.'
           ),
         ]),
+
+        cycleBlock,
 
         ...(() => {
           const phrases = buildInsights(rows);

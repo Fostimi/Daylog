@@ -17,6 +17,8 @@
  * Une chaine est soit une string, soit { n, f, m } ou `n` est obligatoire.
  */
 
+import { toDate } from './date.js';
+
 const STRINGS = {
   'app.name': 'Daylog',
   'app.tagline': 'Ton suivi, sur ton téléphone, nulle part ailleurs',
@@ -125,6 +127,32 @@ export function formatDayLong(date, now = new Date()) {
 
 export function formatDayShort(date) {
   return `${DAY_NAMES[date.getDay()].slice(0, 3)} ${date.getDate()}`;
+}
+
+/**
+ * "12 août" -- sans le jour de la semaine, avec l'annee si elle differe.
+ *
+ * Sert aux dates annoncees dans une phrase ("entre le 9 et le 15 août"), ou le
+ * nom du jour alourdirait sans rien apporter. Accepte une cle de jour comme une
+ * Date, parce que les deux circulent dans l'application.
+ */
+export function formatDayMonth(value, now = new Date()) {
+  const date = typeof value === 'string' ? toDate(value) : value;
+  const base = `${date.getDate()} ${MONTH_NAMES[date.getMonth()]}`;
+  return date.getFullYear() === now.getFullYear() ? base : `${base} ${date.getFullYear()}`;
+}
+
+/**
+ * "20 et le 28 août", ou "28 juillet et le 3 août" a cheval sur deux mois.
+ *
+ * Repeter le mois quand il est le meme des deux cotes ("entre le 20 août et le
+ * 28 août") alourdit une phrase qu'on lit tous les jours.
+ */
+export function formatDayRange(from, to, now = new Date()) {
+  const a = typeof from === 'string' ? toDate(from) : from;
+  const b = typeof to === 'string' ? toDate(to) : to;
+  const sameMonth = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+  return `${sameMonth ? a.getDate() : formatDayMonth(a, now)} et le ${formatDayMonth(b, now)}`;
 }
 
 export function formatTime(iso) {

@@ -17,8 +17,11 @@
 
 import { el, mount, announce } from './dom.js';
 import { topbar } from './menu.js';
-import { choice } from './controls.js';
-import { WEARABLES, MOBILITY, CYCLE } from '../modules/profile-options.js';
+import { choice, numberField } from './controls.js';
+import {
+  WEARABLES, MOBILITY, CYCLE,
+  sanitizeDeclared, DECLARED_CYCLE_RANGE, DECLARED_PERIOD_RANGE,
+} from '../modules/profile-options.js';
 import * as db from '../core/db.js';
 
 export function createProfileView({ store, root, go, onReset, alert = null }) {
@@ -38,6 +41,16 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
   async function patchCapability(key, value) {
     await store.setCapabilities({ [key]: value });
     setStatus('Modification enregistrée.');
+  }
+
+  /**
+   * Enregistre sans reconstruire l'ecran.
+   *
+   * Pour les champs de saisie libre : redessiner a chaque frappe ferait perdre
+   * le focus au bout d'un caractere, et le champ deviendrait inutilisable.
+   */
+  async function patchCapabilityQuietly(key, value) {
+    await store.setCapabilities({ [key]: value });
   }
 
   /**
@@ -151,6 +164,66 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
             onSelect: (v) => patchCapability('cycle', v === 'none' ? null : v),
             allowNone: true,
           }),
+          // Les durees n'ont de sens que pour un cycle qui tourne. On ne les
+          // demande pas a quelqu'un qui vient de repondre que le sien est
+          // suspendu : ce serait n'avoir pas ecoute sa reponse.
+          (capabilities.cycle === 'regular' || capabilities.cycle === 'irregular') &&
+            el('div', {}, [
+              el('p', { class: 'card-hint' },
+                'Deux ordres de grandeur, pour avoir un repère sans attendre deux ' +
+                  'cycles complets. Ils cèdent la place à tes cycles réels dès que ' +
+                  "Daylog en a assez pour calculer lui-même."
+              ),
+              numberField({
+                id: 'p-cycle-length',
+                label: 'Jours entre le début de deux cycles',
+                value: capabilities.cycleLength ?? null,
+                step: 1,
+                min: DECLARED_CYCLE_RANGE[0],
+                max: DECLARED_CYCLE_RANGE[1],
+                unit: 'jours',
+                placeholder: 'ex. 28',
+                onInput: (v) =>
+                  patchCapabilityQuietly('cycleLength', sanitizeDeclared(v, DECLARED_CYCLE_RANGE)),
+              }).node,
+              numberField({
+                id: 'p-period-length',
+                label: 'Durée de tes règles',
+                value: capabilities.periodLength ?? null,
+                step: 1,
+                min: DECLARED_PERIOD_RANGE[0],
+                max: DECLARED_PERIOD_RANGE[1],
+                unit: 'jours',
+                placeholder: 'ex. 5',
+                onInput: (v) =>
+                  patchCapabilityQuietly('periodLength', sanitizeDeclared(v, DECLARED_PERIOD_RANGE)),
+              }).node,
+            ]),
+
+          capabilities.cycle &&
+            choice({
+              legend: 'Veux-tu voir un repère de prochaines règles ?',
+              name: 'p-cycle-forecast',
+              options: [
+                { id: 'yes', label: 'Oui' },
+                {
+                  id: 'no',
+                  label: 'Non, je préfère juste noter',
+                  hint: 'Aucune date affichée nulle part',
+                },
+              ],
+              value:
+                capabilities.cycleForecast === false
+                  ? 'no'
+                  : capabilities.cycleForecast === true
+                    ? 'yes'
+                    : null,
+              // Pas de « Je préfère ne pas répondre » ici : ne pas repondre
+              // revient exactement a repondre oui, et proposer trois portes pour
+              // deux destinations n'aide personne.
+              onSelect: (v) => patchCapability('cycleForecast', v === 'yes'),
+            }),
+
           el('p', { class: 'card-hint', style: { marginBottom: '0' } },
             'Un repère calculé sur la moyenne de tes cycles précédents. Ni un moyen ' +
               'de contraception, ni un outil de conception.'

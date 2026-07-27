@@ -24,7 +24,7 @@ import {
   buildBackup, toJSON, gzip, parseBackupFile, restoreBackup, backupFilename,
   daysSinceBackup,
 } from '../core/backup.js';
-import { allModules, enabledModules } from '../core/modules.js';
+import { allModules, availableModules, enabledModules } from '../core/modules.js';
 
 export function createSettingsView({ store, root, go, alert = null }) {
   let status = null;
@@ -277,7 +277,10 @@ export function createSettingsView({ store, root, go, alert = null }) {
             'Active ou désactive un suivi à tout moment. Désactiver ne supprime ' +
               'rien : tes données restent, elles sont simplement masquées.'
           ),
-          ...allModules().map((mod) => {
+          // Seuls les modules dont les conditions sont reunies : proposer
+          // « Cycle menstruel » a quelqu'un qui a repondu ne pas en avoir
+          // afficherait une case qui se redecocherait toute seule.
+          ...availableModules(capabilities).map((mod) => {
             const on = active.has(mod.id);
             const id = `mod-${mod.id}`;
             return el('label', { class: 'onb-option', for: id }, [

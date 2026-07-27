@@ -22,8 +22,11 @@
  */
 
 import { el, mount } from './dom.js';
-import { optionRow, choice } from './controls.js';
-import { THEMES, WEARABLES, MOBILITY, CYCLE } from '../modules/profile-options.js';
+import { optionRow, choice, numberField } from './controls.js';
+import {
+  THEMES, WEARABLES, MOBILITY, CYCLE,
+  sanitizeDeclared, DECLARED_CYCLE_RANGE, DECLARED_PERIOD_RANGE,
+} from '../modules/profile-options.js';
 
 
 
@@ -37,6 +40,9 @@ export function createOnboarding({ store, root, onDone }) {
     wearable: null,
     mobility: null,
     cycle: null,
+    cycleLength: null,
+    periodLength: null,
+    cycleForecast: null,
     treatment: null,
   };
 
@@ -51,6 +57,7 @@ export function createOnboarding({ store, root, onDone }) {
       stepMobility,
       stepWearable,
       stepCycle,
+      stepCycleDetail,
       stepTreatment,
       stepDone,
     ].filter((s) => !s.when || s.when());
@@ -233,6 +240,76 @@ export function createOnboarding({ store, root, onDone }) {
     }),
   };
 
+  /**
+   * Durees habituelles.
+   *
+   * Sans elles, l'application ne sert a rien pendant deux mois : il faut deux
+   * cycles complets avant qu'une moyenne existe. La personne, elle, connait
+   * souvent son ordre de grandeur -- autant le lui demander.
+   *
+   * L'ecran ne s'affiche pas pour un cycle suspendu : une duree habituelle n'y
+   * veut rien dire, et poser la question donnerait l'impression que
+   * l'application n'a pas ecoute la reponse precedente.
+   */
+  const stepCycleDetail = {
+    id: 'cycle-detail',
+    when: () => answers.cycle === 'regular' || answers.cycle === 'irregular',
+    render: () => ({
+      title: 'Tes ordres de grandeur',
+      intro:
+        'Deux chiffres approximatifs, pour avoir un repère tout de suite. ' +
+        'Si tu ne les connais pas, passe : Daylog les calculera tout seul.',
+      body: [
+        numberField({
+          id: 'onb-cycle-length',
+          label: 'Jours entre le début de deux cycles',
+          value: answers.cycleLength,
+          step: 1,
+          min: DECLARED_CYCLE_RANGE[0],
+          max: DECLARED_CYCLE_RANGE[1],
+          unit: 'jours',
+          placeholder: 'ex. 28',
+          onInput: (v) => {
+            answers.cycleLength = sanitizeDeclared(v, DECLARED_CYCLE_RANGE);
+          },
+        }).node,
+        numberField({
+          id: 'onb-period-length',
+          label: 'Durée de tes règles',
+          value: answers.periodLength,
+          step: 1,
+          min: DECLARED_PERIOD_RANGE[0],
+          max: DECLARED_PERIOD_RANGE[1],
+          unit: 'jours',
+          placeholder: 'ex. 5',
+          onInput: (v) => {
+            answers.periodLength = sanitizeDeclared(v, DECLARED_PERIOD_RANGE);
+          },
+        }).node,
+        choice({
+          legend: 'Veux-tu voir un repère de prochaines règles ?',
+          name: 'cycle-forecast',
+          options: [
+            { id: 'yes', label: 'Oui' },
+            {
+              id: 'no',
+              label: 'Non, je préfère juste noter',
+              hint: 'Aucune date affichée nulle part',
+            },
+          ],
+          value: answers.cycleForecast === null ? null : answers.cycleForecast ? 'yes' : 'no',
+          onSelect: (v) => {
+            answers.cycleForecast = v === 'yes' ? true : v === 'no' ? false : null;
+          },
+        }),
+        el('p', { class: 'onb-hint' },
+          'Un compte à rebours n’est pas souhaitable pour tout le monde, et ce ' +
+            'n’est pas à l’application d’en décider. Ce choix se change à tout moment.'
+        ),
+      ],
+    }),
+  };
+
   const stepTreatment = {
     id: 'treatment',
     render: () => ({
@@ -366,6 +443,9 @@ export function createOnboarding({ store, root, onDone }) {
       // Un cycle suspendu reste un cycle a suivre : la personne peut vouloir
       // noter ce que le traitement change.
       cycle: answers.cycle && answers.cycle !== 'none' ? answers.cycle : null,
+      cycleLength: answers.cycleLength,
+      periodLength: answers.periodLength,
+      cycleForecast: answers.cycleForecast,
       treatment: answers.treatment === 'yes',
     };
 

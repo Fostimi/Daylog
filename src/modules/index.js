@@ -108,6 +108,31 @@ export function registerCoreModules() {
     },
   });
 
+  // ----------------------------------------------------------------- cycle
+  // N'apparait que si la personne a declare suivre un cycle -- question posee a
+  // tout le monde, jamais deduite d'une case « sexe » ni de l'identite. Une
+  // fois visible, il se desactive comme n'importe quel autre module.
+  registerModule({
+    id: 'cycle',
+    label: 'Cycle menstruel',
+    icon: 'cycle',
+    defaultEnabled: true,
+    order: 45,
+    requires: ['cycle'],
+    view: () => import('./views/cycle.js'),
+    summarize(data) {
+      // `cycleStart` remonte aussi quand il vaut `false` : c'est une correction
+      // explicite (« non, ce n'est pas un debut »), et la perdre laisserait la
+      // deduction automatique reprendre le dessus au prochain calcul.
+      const start = typeof data?.cycleStart === 'boolean' ? data.cycleStart : null;
+      return {
+        flow: typeof data?.flow === 'number' ? data.flow : null,
+        cycleStart: start,
+        symptoms: data?.symptoms?.length || null,
+      };
+    },
+  });
+
   // ------------------------------------------------------------- nutrition
   // Mode macros pour commencer. Le mode detaille (micronutriments) viendra en
   // option : 13 champs par repas a la main, personne ne tient une semaine.

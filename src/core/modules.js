@@ -77,6 +77,18 @@ export function enabledModules(moduleState = {}, capabilities = {}) {
   });
 }
 
+/**
+ * Modules qu'il est pertinent de PROPOSER, actifs ou non.
+ *
+ * Different d'`enabledModules` : on ignore ici les choix d'activation, mais pas
+ * les capacites. L'ecran des reglages en a besoin pour ne pas afficher une case
+ * « Cycle menstruel » a quelqu'un qui a repondu ne pas en avoir -- une case qui
+ * de surcroit se serait redecochee toute seule, le module restant masque.
+ */
+export function availableModules(capabilities = {}) {
+  return allModules().filter((m) => m.requires.every((cap) => Boolean(capabilities[cap])));
+}
+
 export function expressModules(moduleState, capabilities) {
   return enabledModules(moduleState, capabilities).filter((m) => m.express);
 }
