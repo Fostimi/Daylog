@@ -130,6 +130,19 @@ export function createAideView({ store, root, go, alert = null }) {
                 '« après les règles » et non par leur nom clinique : nommer une phase ' +
                 'lutéale affirmerait une ovulation que rien ici ne mesure.'
             ),
+            // Ecrit ici, et nulle part ailleurs : une invitation a consulter
+            // declenchee par un seuil serait un jugement medical deguise -- elle
+            // dirait « ton cycle sort de la norme » a partir d'une moyenne
+            // arithmetique, sans rien savoir d'une grossesse, d'un traitement,
+            // d'une perimenopause ou d'un arret de contraception. A cet endroit,
+            // elle est disponible pour qui la cherche et ne vise personne.
+            p(
+              'Daylog ne juge aucun cycle : ni trop long, ni trop court, ni ' +
+                'irrégulier. Il ne sait pas ce qu’un retard signifie pour toi, et il ' +
+                'ne le devinera pas. Si quelque chose t’inquiète, c’est à un ' +
+                'professionnel de santé d’en parler — et tes saisies s’exportent en ' +
+                'un fichier que tu peux lui montrer.'
+            ),
           ]),
 
         section('Ce que Daylog n’est pas', [

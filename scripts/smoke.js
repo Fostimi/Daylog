@@ -827,7 +827,7 @@ const lateText = await page.locator('.cycle-late').innerText();
 check('un retard est signale', /dépassé de \d+ jours/.test(lateText), lateText.split('\n')[0]);
 check(
   'le retard ne dramatise pas',
-  !/urgent|anormal|inquiét|consulte|alerte|attention/i.test(lateText),
+  !/urgent|anormal|inquiét|consulte|médecin|alerte|attention/i.test(lateText),
   lateText.replace(/\n/g, ' ')
 );
 // Le fond ne doit jamais virer au rouge : l'application ne sait rien de ce
@@ -885,6 +885,13 @@ check(
 check(
   "l'avertissement medical complet vit ici",
   docText.includes('pas un dispositif médical')
+);
+// L'invitation a consulter existe, mais nulle part ailleurs qu'ici : declenchee
+// par un seuil, elle dirait « ton cycle sort de la norme » a partir d'une
+// moyenne arithmetique.
+check(
+  'consulter est evoque dans la documentation, jamais declenche par un seuil',
+  docText.includes('professionnel de santé')
 );
 
 await navigate("Aujourd'hui");

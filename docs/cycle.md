@@ -190,6 +190,38 @@ blessant.
 Les repères affichés portent la mention « repère, pas une mesure » dès qu'ils
 sont déduits d'une moyenne plutôt que lus dans une saisie.
 
+### Aucune invitation à consulter déclenchée par un seuil
+
+La question s'est posée : au-delà d'un très grand retard, ne faudrait-il pas
+suggérer d'en parler à un médecin ? L'intention est bonne, la mise en œuvre ne
+l'est pas.
+
+Un message déclenché par un seuil dit, en creux : **« ton cycle sort de la
+norme »** — à partir d'une moyenne arithmétique, et sans rien savoir de ce qui
+se passe. Grossesse, arrêt de contraception, périménopause, post-partum,
+allaitement, traitement hormonal, perte de poids, entraînement intensif, stress,
+ou tout simplement des règles arrivées sans être notées : Daylog ne distingue
+aucun de ces cas. Pour beaucoup de gens, un tel message se lit d'ailleurs
+comme un test de grossesse déguisé — exactement l'inférence médicale qu'on a
+refusé de faire partout ailleurs.
+
+La phrase existe donc, mais **dans « Comment ça marche »**, en permanence et
+sans condition :
+
+> Daylog ne juge aucun cycle : ni trop long, ni trop court, ni irrégulier. Il
+> ne sait pas ce qu'un retard signifie pour toi, et il ne le devinera pas. Si
+> quelque chose t'inquiète, c'est à un professionnel de santé d'en parler — et
+> tes saisies s'exportent en un fichier que tu peux lui montrer.
+
+Disponible pour qui la cherche, elle ne vise personne. Et l'aide concrète que
+l'application peut réellement apporter — un export complet à montrer — est dans
+la même phrase.
+
+Une vérification de bout en bout échoue si les mots « consulte », « médecin »
+ou « anormal » apparaissent dans un message déclenché par les données.
+
+À revoir au moment des essais, avec l'avis des personnes concernées.
+
 ### Aucun diagnostic, aucun conseil
 
 Daylog ne dit pas qu'un cycle est trop long, trop court ou irrégulier. Il
