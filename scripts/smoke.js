@@ -670,8 +670,23 @@ check(
   await page.locator('#cycle-start').isChecked()
 );
 
+// Les symptomes sont replies par defaut : onze pastilles depliees en
+// permanence occupaient la moitie de l'ecran du jour, tous les jours.
+check(
+  'les symptomes sont replies tant que rien n est note',
+  (await page.locator('details.foldable[open]').count()) === 0
+);
+await page.locator('.foldable-head').click();
 await page.locator('.chip-toggle', { hasText: 'Crampes' }).click();
 await page.waitForTimeout(2400); // au-dela du debounce de sauvegarde
+check(
+  'un symptome note rouvre le bloc tout seul',
+  (await page.locator('details.foldable[open]').count()) === 1
+);
+check(
+  'le resume dit ce qui est note sans avoir a ouvrir',
+  (await page.locator('.foldable-note').innerText()).includes('Crampes')
+);
 const cycleDay = (await readStore('days')).find((d) => d.modules?.cycle)?.modules?.cycle;
 check('le flux est enregistre', cycleDay?.flow === 3, JSON.stringify(cycleDay));
 check('les symptomes sont enregistres', cycleDay?.symptoms?.includes('cramps') === true);

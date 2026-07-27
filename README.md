@@ -25,6 +25,7 @@ application.
 | ✅ | Sauvegarde, restauration, partage sélectif |
 | ✅ | Profil modifiable et remise à zéro |
 | ✅ | Bilan, graphiques et phrases de synthèse |
+| ✅ | Cycle menstruel : suivi, symptômes et repère |
 | ⬜ | Activité physique, santé et traitements, argent, apprentissage |
 | ⬜ | Verrouillage par code, notifications, installation depuis les stores |
 
@@ -37,8 +38,9 @@ Un carnet de suivi quotidien pensé pour être tenu **vraiment**, sur la durée 
 - **Aucune donnée ne sort.** Pas de compte, pas de serveur, pas de publicité,
   pas de traceur. L'application n'émet aucune requête réseau — et
   [un test automatique le vérifie](scripts/smoke.js) à chaque fois.
-- **Léger.** 29 Ko chargés au total, aucune dépendance à l'exécution. Pensé pour
-  les téléphones anciens ou presque pleins.
+- **Léger.** 17 Ko à l'ouverture quotidienne, aucune dépendance à l'exécution.
+  Chaque suivi est un fichier à part : celui qu'on n'active pas n'est jamais
+  téléchargé. Pensé pour les téléphones anciens ou presque pleins.
 - **Utilisable par tout le monde.** Navigation clavier, lecteurs d'écran,
   contrastes conformes, et l'interface suit la taille de police réglée sur
   l'appareil.
@@ -67,9 +69,9 @@ npm run build    # version de production dans dist/
 ## Vérifier
 
 ```bash
-npm test                  # 83 tests unitaires
+npm test                  # 122 tests unitaires
 npm run test:timezones    # la suite complète dans 10 fuseaux horaires
-npm run smoke             # 103 vérifications dans un vrai navigateur
+npm run smoke             # 129 vérifications dans un vrai navigateur
 npm run verify            # tout l'enchaînement
 ```
 
@@ -99,6 +101,8 @@ Ils tranchent les arbitrages, dans cet ordre :
   motivées
 - [Calculs métaboliques](docs/calculs-metaboliques.md) — les formules, et
   pourquoi l'identité de genre n'entre dans aucune d'elles
+- [Suivi du cycle](docs/cycle.md) — les calculs, et ce que Daylog refuse de
+  calculer
 
 ## Sauvegardes
 

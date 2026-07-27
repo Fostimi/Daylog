@@ -308,6 +308,13 @@ export function usableDeclared(value) {
   return n >= MIN_CYCLE && n <= MAX_CYCLE ? n : null;
 }
 
+/** Meme garde-fou, pour une duree de regles annoncee. */
+export function usableDeclaredPeriod(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return null;
+  return n >= 1 && n <= 20 ? n : null;
+}
+
 /**
  * Repere de prochaines regles.
  *

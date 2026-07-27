@@ -16,6 +16,7 @@ import {
   periodEpisodes,
   periodStats,
   usableDeclared,
+  usableDeclaredPeriod,
   cycleDay,
   cyclePhase,
   predictNextPeriod,
@@ -291,6 +292,14 @@ test('une duree declaree aberrante est ignoree, jamais rabotee', () => {
   assert.equal(usableDeclared(null), null);
   assert.equal(usableDeclared(''), null);
   assert.equal(usableDeclared('vingt-huit'), null);
+});
+
+test('une duree de regles annoncee suit les memes garde-fous', () => {
+  assert.equal(usableDeclaredPeriod(5), 5);
+  assert.equal(usableDeclaredPeriod(1), 1);
+  assert.equal(usableDeclaredPeriod(0), null);
+  assert.equal(usableDeclaredPeriod(60), null);
+  assert.equal(usableDeclaredPeriod(undefined), null);
 });
 
 test('une duree declaree sert de repere en attendant deux cycles', () => {

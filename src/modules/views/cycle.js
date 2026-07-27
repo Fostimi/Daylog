@@ -25,7 +25,7 @@
 
 import { el, mount } from '../../ui/dom.js';
 import * as db from '../../core/db.js';
-import { addDays, diffDays, today as todayKey } from '../../core/date.js';
+import { addDays, diffDays } from '../../core/date.js';
 import { formatDayMonth, formatDayRange } from '../../core/i18n.js';
 import {
   FLOW_LEVELS,
@@ -36,6 +36,7 @@ import {
   cycleDay,
   cyclePhase,
   predictNextPeriod,
+  usableDeclaredPeriod,
   daysLate,
 } from '../../core/cycle.js';
 
@@ -62,6 +63,9 @@ export async function render({ store }) {
   } catch {
     history = [];
   }
+
+  // `null` = on suit ce qui est note ; un booleen = la personne a decide.
+  let symptomsOpen = null;
 
   function data() {
     return store.get('cycle') || {};
@@ -227,6 +231,41 @@ export async function render({ store }) {
     ]);
   }
 
+  /**
+   * Symptomes, replies par defaut.
+   *
+   * Onze pastilles font sept rangees sur un telephone : depliees en
+   * permanence, elles occupaient la moitie de l'ecran du jour tous les jours,
+   * y compris pour quelqu'un qui ne note que son flux. Le repliage suit le
+   * meme principe que les check-ins : ouvert s'il y a quelque chose dedans,
+   * ferme sinon, et le resume dit ce qui est note sans avoir a ouvrir.
+   *
+   * `<details>` plutot qu'un repliage maison : le navigateur fournit le
+   * clavier, l'annonce aux lecteurs d'ecran et la recherche dans la page.
+   */
+  function symptomsBlock(selected) {
+    const labels = SYMPTOMS.filter((s) => selected.has(s.id)).map((s) => s.label);
+    // `symptomsOpen` retient ce que la personne a fait du bloc. Sans lui, chaque
+    // redessin le refermait : decocher son dernier symptome faisait disparaitre
+    // la liste sous le doigt, au moment precis ou l'on veut en cocher un autre.
+    const details = el('details', {
+      class: 'foldable',
+      open: symptomsOpen === null ? selected.size > 0 : symptomsOpen,
+      onToggle: () => {
+        symptomsOpen = details.open;
+      },
+    }, [
+      el('summary', { class: 'foldable-head' }, [
+        el('span', { class: 'field-label' }, 'Ce que tu ressens'),
+        el('span', { class: `foldable-note${labels.length ? ' is-set' : ''}` },
+          labels.length ? labels.join(' · ') : 'Rien de noté'
+        ),
+      ]),
+      symptomChips(selected),
+    ]);
+    return details;
+  }
+
   function symptomChips(selected) {
     return el('div', { class: 'chips' }, SYMPTOMS.map((symptom) => {
       const on = selected.has(symptom.id);
@@ -291,7 +330,10 @@ export async function render({ store }) {
       return el('div', { class: 'cycle-forecast' }, lines);
     }
 
-    const late = daysLate(prediction, todayKey(store.getSettings().dayStartHour || 0));
+    // Le retard se lit a la date affichee, pas a la date du jour : toute la
+    // carte decrit la journee qu'on regarde, et une journee d'il y a trois mois
+    // annoncerait sinon un retard de trois mois.
+    const late = daysLate(prediction, date);
 
     lines.push(
       el('p', { class: 'cycle-forecast-main' },
@@ -325,10 +367,17 @@ export async function render({ store }) {
       );
     }
 
-    if (periods.average) {
+    // La duree des regles vient des episodes observes ; a defaut, de ce que la
+    // personne a annonce. La phrase dit laquelle des deux, parce que « en
+    // moyenne » sur une valeur jamais mesuree serait un mensonge.
+    const declaredPeriod = usableDeclaredPeriod(capabilities.periodLength);
+    if (periods.average || declaredPeriod) {
+      const days = periods.average || declaredPeriod;
       lines.push(
         el('p', { class: 'card-hint' },
-          `Tes règles durent ${periods.average} jour${periods.average > 1 ? 's' : ''} en moyenne.`
+          periods.average
+            ? `Tes règles durent ${days} jour${days > 1 ? 's' : ''} en moyenne.`
+            : `Tu as indiqué des règles de ${days} jour${days > 1 ? 's' : ''}.`
         )
       );
     }
@@ -396,10 +445,7 @@ export async function render({ store }) {
 
       flow !== null && flow > 0 && startRow(),
 
-      el('div', { class: 'field', style: { marginTop: '0.75rem' } }, [
-        el('span', { class: 'field-label' }, 'Ce que tu ressens'),
-        symptomChips(symptoms),
-      ]),
+      symptomsBlock(symptoms),
 
       forecastBlock(stats, prediction, periods),
 

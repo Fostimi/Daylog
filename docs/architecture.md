@@ -408,3 +408,51 @@ sans quoi la tabulation repartirait du haut de la page. L'écran courant porte
 
 Le routeur enregistre la journée en cours avant chaque changement d'écran :
 naviguer ne doit jamais faire perdre une saisie.
+
+## Décision 20 — Le cycle se déduit des saisies, il ne se déclare pas
+
+Le cahier des charges demandait un suivi de cycle « avec les phases, les
+symptômes, et une prédiction dans la moyenne d'un cycle pour avoir un repère ».
+Trois décisions ont été prises en l'implémentant, et chacune s'écarte de
+l'évidence apparente.
+
+**Le premier jour est calculé, pas coché.** Une case « premier jour » a l'air
+simple et ne l'est pas : oubliée une seule fois, tous les repères suivants sont
+décalés de plusieurs semaines sans que rien ne le signale. Daylog déduit les
+débuts de cycle des intensités notées — un jour saignant qu'aucun autre ne
+précède de trois jours ou moins — et laisse corriger. La correction seule est
+écrite dans la fiche ; tant qu'on n'y touche pas, la déduction reste libre de
+changer si l'on complète une journée oubliée.
+
+**Les phases sont dites en français courant, pas en vocabulaire clinique.**
+« Avant les règles », « après les règles ». Nommer une phase lutéale
+affirmerait qu'une ovulation a eu lieu, ce qui est faux pour une partie des
+cycles — contraception hormonale, SOPK, périménopause, post-partum — et
+l'affirmer à ces personnes serait inexact autant que blessant. Dans le même
+mouvement, **aucune fenêtre de fertilité n'est calculée** : ce serait fabriquer
+une information médicale à partir des seules dates de saignement, et des gens
+s'en serviraient comme moyen de contraception. Une vérification de bout en bout
+échoue si ce vocabulaire réapparaît à l'écran.
+
+**Le module ne suppose jamais le genre de qui l'utilise.** Il n'existe aucune
+case « sexe » dans Daylog. Le suivi s'active sur « as-tu un cycle menstruel à
+suivre ? », question posée à tout le monde — la seule formulation juste à la
+fois pour une femme qui n'a pas de cycle et pour une personne trans ou non
+binaire qui en a un. Le contrôle automatique vérifie qu'aucun mot genré
+n'apparaît sur l'écran du module.
+
+Trois conséquences pratiques, trouvées en écrivant les tests :
+
+1. **La durée habituelle peut être annoncée** à la première ouverture, comme le
+   demandait le cahier des charges. Sans elle, l'application n'aurait rien à
+   dire pendant deux mois — le temps d'observer deux cycles complets. Les
+   cycles réels prennent le relais dès qu'il y en a assez.
+2. **Le repère peut être refusé.** Un compte à rebours avant les prochaines
+   règles n'est pas souhaitable pour tout le monde, et ce n'est pas à
+   l'application d'en décider.
+3. **Les réglages ne proposent que les modules dont les conditions sont
+   réunies.** Auparavant, la liste affichait tous les modules : cocher « Cycle
+   menstruel » sans avoir déclaré de cycle produisait une case qui se
+   redécochait toute seule, le module restant masqué par sa capacité manquante.
+
+Tous les calculs sont décrits dans [docs/cycle.md](cycle.md).

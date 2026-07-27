@@ -940,6 +940,55 @@ body {
   font-weight: 700;
 }
 
+/* Bloc repliable generique. Meme grammaire visuelle que les check-ins de
+   l'ecran du jour, sans leur etat « note » : ici il n'y a rien a horodater. */
+.foldable {
+  margin-top: 0.75rem;
+}
+.foldable-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  min-height: var(--tap);
+  cursor: pointer;
+  list-style: none;
+  padding-right: 1.5rem;
+  position: relative;
+}
+.foldable-head > * {
+  min-width: 0;
+}
+.foldable-head::-webkit-details-marker {
+  display: none;
+}
+.foldable-head::after {
+  content: '';
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 0.125rem solid var(--text-muted);
+  border-bottom: 0.125rem solid var(--text-muted);
+  transform: translateY(-70%) rotate(45deg);
+  transition: transform 0.15s;
+}
+.foldable[open] > .foldable-head::after {
+  transform: translateY(-30%) rotate(-135deg);
+}
+.foldable[open] > .foldable-head {
+  margin-bottom: 0.5rem;
+}
+.foldable-note {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+.foldable-note.is-set {
+  color: var(--accent-text);
+}
+
 .cycle-phase {
   margin-top: -0.25rem;
   margin-bottom: 0.875rem;
