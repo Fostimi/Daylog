@@ -64,7 +64,7 @@ export function createBilanView({ store, root, go, alert = null }) {
       db.getSummaries(addDays(end, -CYCLE_HISTORY_DAYS), end),
     ]);
 
-    const stats = cycle.cycleStats(rows);
+    const stats = cycle.cycleStats(rows, { mode: capabilities.cycle });
     // Aucune date de regles notee : une carte pleine de tirets n'apprend rien.
     if (!stats.starts.length) return null;
 

@@ -160,6 +160,47 @@ test('un trou de suivi ne devient pas un cycle de reference', () => {
   assert.equal(stats.average, 28);
 });
 
+test('un mois entier non note ne double pas la moyenne', () => {
+  // Le cas de quelqu'un qui ne note que pendant ses regles et qui saute un
+  // mois : Daylog voit un cycle de 56 jours la ou il y en a eu deux de 28.
+  const stats = cycleStats(cycles('2026-01-05', [28, 56, 28, 27]));
+  assert.equal(stats.skipped, 1);
+  assert.equal(stats.count, 3);
+  assert.equal(stats.average, 28, 'et non 35, qui ne correspond a aucun cycle vecu');
+  assert.equal(stats.lengths.length, 4, 'la longueur reste dans l historique');
+});
+
+test('un cycle long declare irregulier n est jamais mis de cote', () => {
+  // Chez quelqu'un dont les cycles vont de 25 a 50 jours, un cycle long n'est
+  // pas une erreur de saisie : c'est son corps.
+  const stats = cycleStats(cycles('2026-01-05', [28, 56, 28, 27]), { mode: 'irregular' });
+  assert.equal(stats.skipped, 0);
+  assert.equal(stats.count, 4);
+});
+
+test('sans idee de ce qui est habituel, on ne juge rien', () => {
+  // Deux longueurs ne suffisent pas a designer une aberrante.
+  const stats = cycleStats(cycles('2026-01-05', [28, 56]));
+  assert.equal(stats.skipped, 0);
+  assert.equal(stats.count, 2);
+});
+
+test('une variation ordinaire n est pas prise pour un oubli', () => {
+  const stats = cycleStats(cycles('2026-01-05', [26, 31, 28, 34]));
+  assert.equal(stats.skipped, 0);
+  assert.equal(stats.count, 4);
+});
+
+test('noter uniquement pendant ses regles suffit', () => {
+  // Aucune journee entre les episodes : c'est l'usage le plus leger a tenir, et
+  // il doit produire exactement les memes reperes.
+  const rows = cycles('2026-01-05', [28, 28, 28]);
+  const stats = cycleStats(rows);
+  assert.equal(stats.count, 3);
+  assert.equal(stats.average, 28);
+  assert.equal(rows.every((r) => r.flow > 0), true, 'aucune journee « rien » saisie');
+});
+
 test('seuls les cycles recents comptent', () => {
   const anciens = Array(4).fill(40);
   const recents = Array(RECENT_CYCLES).fill(28);
@@ -236,10 +277,19 @@ test('un cycle declare irregulier n annonce jamais de date', () => {
 });
 
 test('des cycles trop disperses ne donnent rien du tout', () => {
-  const stats = cycleStats(cycles('2026-01-05', [21, 80, 30]));
+  const stats = cycleStats(cycles('2026-01-05', [20, 62]));
   const p = predictNextPeriod(stats, { mode: 'regular' });
   assert.equal(p.reason, 'too-variable');
   assert.equal(p.date, undefined);
+});
+
+test('une dispersion enorme et assumee reste une dispersion, pas un oubli', () => {
+  // Sur un cycle declare irregulier, rien n'est mis de cote : la dispersion est
+  // reelle, et c'est elle qu'on annonce -- ou dont on dit qu'elle empeche tout
+  // repere.
+  const stats = cycleStats(cycles('2026-01-05', [21, 80, 30]), { mode: 'irregular' });
+  assert.equal(stats.skipped, 0);
+  assert.equal(predictNextPeriod(stats, { mode: 'irregular' }).reason, 'too-variable');
 });
 
 test('le retard ne se compte qu au-dela de la fourchette annoncee', () => {

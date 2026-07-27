@@ -206,11 +206,13 @@ export function cycleLengths(starts = []) {
  * (au-dela de `MAX_CYCLE`, donc presque toujours un trou de suivi) restent
  * listes mais ne servent pas de reference.
  */
-export function cycleStats(rows = []) {
+export function cycleStats(rows = [], { mode = null } = {}) {
   const starts = consolidateStarts(periodStarts(rows));
   const lengths = cycleLengths(starts);
 
-  const kept = lengths.filter((l) => l.days <= MAX_CYCLE).slice(-RECENT_CYCLES);
+  const plausible = lengths.filter((l) => l.days <= MAX_CYCLE);
+  const skipped = plausible.filter((l) => looksSkipped(l.days, plausible, mode));
+  const kept = plausible.filter((l) => !skipped.includes(l)).slice(-RECENT_CYCLES);
   const days = kept.map((l) => l.days);
 
   const average = days.length ? Math.round(days.reduce((a, b) => a + b, 0) / days.length) : null;
@@ -227,8 +229,49 @@ export function cycleStats(rows = []) {
     max,
     spread: days.length ? max - min : null,
     lastStart: starts.length ? starts[starts.length - 1] : null,
-    ignored: lengths.length - lengths.filter((l) => l.days <= MAX_CYCLE).length,
+    ignored: lengths.length - plausible.length,
+    // Combien de cycles ont ete mis de cote parce qu'il en manque
+    // vraisemblablement un au milieu. L'ecran peut le dire ; il ne doit
+    // surtout pas le cacher.
+    skipped: skipped.length,
   };
+}
+
+/** Mediane des autres longueurs -- celle qu'on est en train de juger exclue. */
+function medianOfOthers(days, all) {
+  const others = all.filter((l) => l.days !== days).map((l) => l.days).sort((a, b) => a - b);
+  if (!others.length) return null;
+  const middle = Math.floor(others.length / 2);
+  return others.length % 2 ? others[middle] : (others[middle - 1] + others[middle]) / 2;
+}
+
+/**
+ * Cette longueur cache-t-elle un cycle non note ?
+ *
+ * Le cas vise est celui de quelqu'un qui ne note que pendant ses regles -- ce
+ * qui est un usage parfaitement legitime, et meme le plus leger a tenir. S'il
+ * saute un mois entier (application pas ouverte, periode chargee), Daylog voit
+ * un « cycle » de 56 jours la ou il y en a eu deux de 28. Sans precaution, cette
+ * longueur double la moyenne et decale tous les reperes suivants.
+ *
+ * La regle : une longueur d'au moins 1,75 fois la mediane des autres est
+ * probablement un cycle manquant. Le rapport est compare a la mediane des
+ * AUTRES longueurs, pas a celle de l'ensemble : une valeur aberrante tire la
+ * mediane vers elle et finirait par se justifier toute seule.
+ *
+ * Trois precautions, parce que se tromper ici revient a effacer une realite :
+ *
+ * - il faut au moins trois longueurs, donc une idee de ce qui est habituel ;
+ * - un cycle DECLARE IRREGULIER n'est jamais concerne. Chez quelqu'un dont les
+ *   cycles vont de 25 a 50 jours, un cycle long n'est pas une erreur de saisie,
+ *   c'est son corps -- et l'ecarter reviendrait a lui dire le contraire ;
+ * - rien n'est efface : la longueur reste dans `lengths`, et `skipped` dit
+ *   combien ont ete mises de cote.
+ */
+function looksSkipped(days, all, mode) {
+  if (mode === 'irregular' || all.length < 3) return false;
+  const reference = medianOfOthers(days, all);
+  return reference !== null && days >= reference * 1.75;
 }
 
 /**

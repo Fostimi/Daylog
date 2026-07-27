@@ -100,6 +100,31 @@ Le seuil est haut à dessein. Des cycles réellement longs sont la réalité de
 beaucoup de gens (SOPK, périménopause), et les écarter serait leur dire que
 leur corps est une erreur de saisie.
 
+### Noter uniquement pendant ses règles suffit
+
+C'est même l'usage le plus léger, et il est pleinement supporté : les débuts de
+cycle se déduisent des seules journées où un saignement est noté. Les journées
+sans saisie ne sont pas des zéros, elles sont simplement absentes — ouvrir
+l'application quatre jours par mois donne exactement les mêmes repères qu'un
+suivi quotidien.
+
+Reste un cas : **un mois entier oublié**. Daylog voit alors un « cycle » de 56
+jours là où il y en a eu deux de 28, et cette longueur doublerait la moyenne.
+
+Une longueur d'au moins **1,75 fois la médiane des autres** est donc écartée du
+calcul, comme probablement incomplète. La comparaison se fait avec la médiane
+des *autres* longueurs, pas de l'ensemble : une valeur aberrante tire la
+médiane vers elle et finirait par se justifier toute seule.
+
+Trois précautions, parce que se tromper ici revient à effacer une réalité :
+
+- il faut **au moins trois longueurs**, donc une idée de ce qui est habituel ;
+- un cycle **déclaré irrégulier n'est jamais concerné**. Chez quelqu'un dont les
+  cycles vont de 25 à 50 jours, un cycle long n'est pas une erreur de saisie,
+  c'est son corps — et l'écarter reviendrait à lui dire le contraire ;
+- **rien n'est effacé** : la longueur reste dans l'historique, et la carte dit
+  combien d'intervalles ont été mis de côté, et pourquoi.
+
 **La durée des règles** se mesure de la même façon, sur les épisodes terminés.
 L'épisode en cours est mis de côté : sans cette précaution, ouvrir
 l'application le premier jour de ses règles faisait chuter la moyenne à chaque

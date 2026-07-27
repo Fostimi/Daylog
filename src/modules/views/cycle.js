@@ -447,7 +447,7 @@ export async function render({ store }) {
     const symptoms = new Set(current.symptoms || []);
     const series = rows();
 
-    const stats = cycleStats(series);
+    const stats = cycleStats(series, { mode });
     const periods = periodStats(series, { upTo: date });
     const prediction = predictNextPeriod(stats, {
       mode,
