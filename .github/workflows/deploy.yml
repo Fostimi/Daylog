@@ -77,6 +77,12 @@ jobs:
   deployer:
     name: Publication (necessite Pages active)
     needs: construire
+    # Uniquement depuis la branche par defaut. L'environnement Pages n'accepte
+    # de deploiement que depuis elle : sur une branche de travail, ce job
+    # echouait systematiquement et affichait une croix rouge alors que les
+    # tests et la construction etaient verts. Une CI qui crie au loup a chaque
+    # push finit par ne plus etre lue.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     environment:
       name: github-pages

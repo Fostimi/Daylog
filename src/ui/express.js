@@ -248,15 +248,12 @@ export function createExpressView({ store, root, go }) {
         backupBanner(),
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title' }, 'Ta journée en bref'),
-          el('p', { class: 'card-hint' }, 'Trois questions. Le détail si tu en as envie.'),
           ...CHECKIN_SLOTS.map(renderCheckin),
         ]),
         renderNote(),
         modulesSlot,
         el('p', { class: 'footer-note' }, [
           saveState,
-          el('br'),
-          "Tes données restent sur cet appareil. Daylog n'envoie rien, nulle part.",
         ]),
       ]),
     ]);

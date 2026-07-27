@@ -21,6 +21,8 @@ import {
   cyclePhase,
   predictNextPeriod,
   daysLate,
+  lateness,
+  LONG_DELAY_DAYS,
 } from '../src/core/cycle.js';
 import { addDays } from '../src/core/date.js';
 
@@ -375,6 +377,69 @@ test('la date attendue depassee se dit sans dramatiser', () => {
   const phase = cyclePhase({ stats, prediction, date: addDays(prediction.date, 1) });
   assert.equal(phase.id, 'expected');
   assert.equal(phase.source, 'estimated');
+});
+
+// ------------------------------------------------------------------ retard
+
+/** Trois cycles de 28 jours : le repere tombe a J+28 du dernier debut. */
+function troisCycles() {
+  const stats = cycleStats(cycles('2026-01-05', [28, 28, 28]));
+  return { stats, prediction: predictNextPeriod(stats, { mode: 'regular' }) };
+}
+
+test('aucun bandeau tant qu on est dans la fourchette', () => {
+  const { stats, prediction } = troisCycles();
+  assert.equal(lateness(prediction, prediction.to, { lastStart: stats.lastStart }), null);
+});
+
+test('le retard monte en precision, pas en gravite', () => {
+  const { stats, prediction } = troisCycles();
+  const court = lateness(prediction, addDays(prediction.to, 2), { lastStart: stats.lastStart });
+  assert.equal(court.level, 'late');
+  assert.equal(court.days, 2);
+
+  const long = lateness(prediction, addDays(prediction.to, LONG_DELAY_DAYS), {
+    lastStart: stats.lastStart,
+  });
+  assert.equal(long.level, 'long');
+});
+
+test('un cycle declare irregulier n atteint jamais le second palier', () => {
+  // Chez quelqu'un dont les cycles varient de trente jours, un mois d'ecart
+  // n'est pas un evenement : le signaler tous les mois reviendrait a lui
+  // rappeler que son corps ne rentre pas dans la moyenne.
+  const { stats, prediction } = troisCycles();
+  const state = lateness(prediction, addDays(prediction.to, LONG_DELAY_DAYS + 30), {
+    mode: 'irregular',
+    lastStart: stats.lastStart,
+  });
+  assert.equal(state.level, 'late');
+});
+
+test('« c est normal » fait taire le bandeau jusqu au palier suivant', () => {
+  const { stats, prediction } = troisCycles();
+  const dismissed = { start: stats.lastStart, level: 'late' };
+
+  assert.equal(
+    lateness(prediction, addDays(prediction.to, 3), { lastStart: stats.lastStart, dismissed }),
+    null
+  );
+
+  const apres = lateness(prediction, addDays(prediction.to, LONG_DELAY_DAYS), {
+    lastStart: stats.lastStart,
+    dismissed,
+  });
+  assert.equal(apres.level, 'long', 'un nouveau palier a de nouveau quelque chose a dire');
+});
+
+test('un refus ne suit pas la personne d un cycle a l autre', () => {
+  const { stats, prediction } = troisCycles();
+  const vieux = { start: '2025-01-01', level: 'late' };
+  const state = lateness(prediction, addDays(prediction.to, 3), {
+    lastStart: stats.lastStart,
+    dismissed: vieux,
+  });
+  assert.equal(state.days, 3);
 });
 
 // ------------------------------------------------------- de bout en bout

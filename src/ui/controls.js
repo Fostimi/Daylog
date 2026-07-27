@@ -278,3 +278,42 @@ export function choice({ legend, name, options, value, onSelect, allowNone = fal
     ),
   ]);
 }
+
+/**
+ * Petit « i » qui revele une explication.
+ *
+ * Nait d'un defaut de formulation : les ecrans repetaient mot pour mot ce que
+ * la premiere ouverture avait deja explique. Repete, un texte cesse d'etre lu,
+ * et surtout il donne l'impression d'un tutoriel qui reprend tout depuis le
+ * debut a chaque ecran -- comme si la personne n'avait pas compris.
+ *
+ * Le principe retenu : l'ecran reste factuel, l'explication existe toujours
+ * mais se demande. Ce qui n'est pas evident se met derriere ce bouton ; ce qui
+ * releve du fonctionnement general va dans l'ecran « Comment ça marche ».
+ *
+ * `<button aria-expanded>` + panneau revele : le motif le plus simple qui soit
+ * correct pour les lecteurs d'ecran, sans role ARIA exotique a maintenir.
+ */
+export function info({ id, label, text }) {
+  const panel = el('p', { class: 'info-panel', id, hidden: true },
+    Array.isArray(text) ? text : [text]
+  );
+
+  const button = el('button', {
+    type: 'button',
+    class: 'info-btn',
+    'aria-expanded': 'false',
+    'aria-controls': id,
+    // Le libelle dit de QUOI il s'agit : « En savoir plus » repete douze fois
+    // dans une page ne renseigne personne qui navigue de bouton en bouton.
+    'aria-label': label,
+    onClick: () => {
+      const open = panel.hidden;
+      panel.hidden = !open;
+      button.setAttribute('aria-expanded', open ? 'true' : 'false');
+      button.classList.toggle('is-open', open);
+    },
+  }, 'i');
+
+  return { button, panel };
+}

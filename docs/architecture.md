@@ -456,3 +456,39 @@ Trois conséquences pratiques, trouvées en écrivant les tests :
    redécochait toute seule, le module restant masqué par sa capacité manquante.
 
 Tous les calculs sont décrits dans [docs/cycle.md](cycle.md).
+
+## Décision 21 — Un texte répété n'est plus lu, il infantilise
+
+Constat d'usage après la première semaine : chaque écran re-expliquait, dans
+les mêmes termes, ce que la première ouverture avait déjà dit. « Tes données
+restent sur cet appareil », « une moyenne ne décrit que ce que tu as réellement
+noté », « ni un moyen de contraception »… trois fois, quatre fois, tous les
+jours.
+
+L'intention était rassurante ; l'effet est l'inverse. Une application qui
+reprend tout depuis le début à chaque page traite la personne comme si elle
+n'avait pas compris la première fois — la sensation du tutoriel dont on ne sort
+jamais. Et un texte répété cesse d'être lu, donc il ne protège plus personne :
+c'est exactement l'argument qui avait déjà fait retirer le rappel de
+corrélation de sous chaque phrase du bilan.
+
+Trois niveaux, désormais :
+
+| Où | Quoi |
+|---|---|
+| Sur l'écran | le fait, et rien de plus — « Règles : 5 jours en moyenne » |
+| Derrière un « i » | ce qui n'est pas évident : sur quoi repose ce chiffre |
+| « Comment ça marche » | le fonctionnement général et les partis pris |
+
+Le « i » est un `<button aria-expanded>` qui révèle un paragraphe — le motif le
+plus simple qui soit correct pour les lecteurs d'écran. Son libellé accessible
+dit **de quoi** il s'agit : douze boutons « En savoir plus » dans une page ne
+renseignent personne qui navigue de bouton en bouton.
+
+L'écran « Comment ça marche » est atteignable depuis le menu comme les autres,
+jamais imposé, et n'est téléchargé que si on l'ouvre. Ses sections sont
+repliées : on y vient chercher une réponse, pas lire un manuel.
+
+Une exception assumée : l'avertissement « pas un dispositif médical » reste
+affiché en clair sur le bilan. Celui-là n'est pas une explication, c'est une
+limite — et une limite se rappelle.

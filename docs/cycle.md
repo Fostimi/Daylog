@@ -11,7 +11,7 @@ plus intime de l'application : il doit donc être le plus transparent.
 
 Aucune intelligence artificielle n'intervient. Tout ce qui suit tient en une
 poignée d'additions et de moyennes, lisibles dans
-[`src/core/cycle.js`](../src/core/cycle.js) et vérifiées par 39 tests.
+[`src/core/cycle.js`](../src/core/cycle.js) et vérifiées par 44 tests.
 
 ## Les quatre règles
 
@@ -135,10 +135,33 @@ qu'ils valent.
 observés. C'est un point de départ — sans lui, l'application n'aurait rien à
 dire pendant deux mois — jamais une référence permanente.
 
-**Le retard se compte à partir du haut de la fourchette**, pas de la date
-centrale : tant qu'on est dans la fourchette annoncée, il n'y a rien à
-signaler. Et quand il y a du retard, la phrase reste factuelle — « un cycle qui
-se décale est courant, et Daylog n'en tire aucune conclusion ».
+### Le retard
+
+**Il se compte à partir du haut de la fourchette**, pas de la date centrale :
+tant qu'on est dans la fourchette annoncée, il n'y a rien à signaler.
+
+Au-delà, un bandeau apparaît. Il monte en **précision**, jamais en gravité :
+
+| Palier | Quand | Ce qui est dit |
+|---|---|---|
+| — | dans la fourchette | rien |
+| `late` | au-delà | « Repère dépassé de N jours. Un cycle qui se décale est courant. » |
+| `long` | à partir de 22 jours | la même chose, plus : une journée a peut-être été oubliée — la compléter recalcule le repère |
+
+Un cycle déclaré **irrégulier n'atteint jamais le second palier**. Chez
+quelqu'un dont les cycles varient de trente jours, un mois d'écart n'est pas un
+événement, et le lui signaler reviendrait à lui rappeler tous les mois que son
+corps ne rentre pas dans la moyenne.
+
+Il n'y a pas de troisième palier, et aucune couleur d'alerte — ni rouge, ni
+orange. Au-delà de « une journée a peut-être été oubliée », l'application
+n'a rien à dire : la suite serait un diagnostic.
+
+**Un bouton « C'est normal »** fait taire le bandeau pour le cycle en cours et
+pour ce palier. Il existe surtout pour les deux cas où le repère se trompe le
+plus : les premiers mois, quand Daylog ne connaît pas encore le cycle, et les
+cycles qui ne rentrent dans aucune moyenne. Le refus ne suit pas la personne
+d'un cycle à l'autre.
 
 ## Ce que Daylog ne calculera pas
 

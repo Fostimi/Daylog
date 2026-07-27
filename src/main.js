@@ -71,6 +71,10 @@ async function boot() {
         const { createSettingsView } = await import('./ui/settings.js');
         createSettingsView({ store, root, go, alert }).render();
       },
+      help: async () => {
+        const { createAideView } = await import('./ui/aide.js');
+        createAideView({ store, root, go, alert }).render();
+      },
       profile: async () => {
         const { createProfileView } = await import('./ui/profile.js');
         createProfileView({

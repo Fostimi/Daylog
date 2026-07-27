@@ -27,6 +27,7 @@ export const DESTINATIONS = [
   { id: 'bilan', label: 'Bilan', icon: '📊' },
   { id: 'data', label: 'Mes données', icon: '💾' },
   { id: 'profile', label: 'Profil', icon: '👤' },
+  { id: 'help', label: 'Comment ça marche', icon: '❓' },
 ];
 
 /**

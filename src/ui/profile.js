@@ -123,8 +123,7 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
             onSelect: (v) => patchProfile({ address: v || 'neutral' }),
           }),
           el('p', { class: 'card-hint', style: { marginBottom: '0' } },
-            "Cela ne change que la formulation des phrases. Ce choix n'entre dans " +
-              'aucun calcul.'
+            "N'entre dans aucun calcul."
           ),
         ]),
 
@@ -170,9 +169,7 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
           (capabilities.cycle === 'regular' || capabilities.cycle === 'irregular') &&
             el('div', {}, [
               el('p', { class: 'card-hint' },
-                'Deux ordres de grandeur, pour avoir un repère sans attendre deux ' +
-                  'cycles complets. Ils cèdent la place à tes cycles réels dès que ' +
-                  "Daylog en a assez pour calculer lui-même."
+                'Facultatif. Remplacé par tes cycles réels dès qu’il y en a deux.'
               ),
               numberField({
                 id: 'p-cycle-length',
@@ -225,8 +222,7 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
             }),
 
           el('p', { class: 'card-hint', style: { marginBottom: '0' } },
-            'Un repère calculé sur la moyenne de tes cycles précédents. Ni un moyen ' +
-              'de contraception, ni un outil de conception.'
+            'Ni un moyen de contraception, ni un outil de conception.'
           ),
         ]),
 
@@ -248,8 +244,7 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title' }, 'Recommencer'),
           el('p', { class: 'card-hint' },
-            'Refaire la présentation repose les questions du début sans toucher à ' +
-              'tes journées : elles sont conservées.'
+            'Repose les questions du début. Tes journées sont conservées.'
           ),
           el('div', { class: 'card-actions' }, [
             el('button', { class: 'btn', type: 'button', onClick: redoOnboarding },

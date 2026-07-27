@@ -24,6 +24,7 @@
  */
 
 import { el, mount } from '../../ui/dom.js';
+import { info } from '../../ui/controls.js';
 import * as db from '../../core/db.js';
 import { addDays, diffDays } from '../../core/date.js';
 import { formatDayMonth, formatDayRange } from '../../core/i18n.js';
@@ -37,7 +38,7 @@ import {
   cyclePhase,
   predictNextPeriod,
   usableDeclaredPeriod,
-  daysLate,
+  lateness,
 } from '../../core/cycle.js';
 
 /**
@@ -132,6 +133,20 @@ export async function render({ store }) {
     if (current.has(id)) current.delete(id);
     else current.add(id);
     store.update('cycle', { symptoms: [...current] });
+    draw();
+  }
+
+  /**
+   * « C'est normal » : la personne sait, on se tait.
+   *
+   * Enregistre dans les reglages et non dans la fiche du jour : ecarter un
+   * bandeau n'est pas une donnee de sante, et cela ne doit pas se retrouver
+   * dans un extrait transmis a un medecin.
+   */
+  async function dismissLate(level, start) {
+    const dismissed = { start, level };
+    await store.setCapabilities({ cycleLateDismissed: dismissed });
+    capabilities.cycleLateDismissed = dismissed;
     draw();
   }
 
@@ -285,87 +300,118 @@ export async function render({ store }) {
   }
 
   /**
-   * Le repere, et surtout ce qu'il vaut.
+   * Bandeau de retard.
    *
-   * Chaque cas dit pourquoi il dit ce qu'il dit. Un ecran qui reste vide sans
-   * explication laisse chacun imaginer la raison -- souvent la mauvaise.
+   * Trois exigences contradictoires en apparence : dire quelque chose, ne pas
+   * alarmer, et ne pas revenir tous les jours a l'identique.
+   *
+   * La montee se fait en PRECISION, jamais en gravite -- pas de rouge, pas de
+   * point d'exclamation, aucune hypothese sur ce que le retard signifie. Au
+   * deuxieme palier, la seule chose que Daylog puisse utilement dire est qu'une
+   * journee a peut-etre ete oubliee ; au-dela commencerait le diagnostic, qui
+   * n'est pas son role.
+   *
+   * « C'est normal » est la pour les cycles qu'on ne connait pas encore et pour
+   * ceux qui ne rentrent dans aucune moyenne : le bandeau se tait alors jusqu'au
+   * palier suivant, et repart de zero au prochain cycle.
    */
-  function forecastBlock(stats, prediction, periods) {
-    const lines = [];
+  function lateBanner(state, stats) {
+    if (!state) return null;
+    const { days, level } = state;
 
+    return el('div', { class: `cycle-late is-${level}`, role: 'status' }, [
+      el('p', { class: 'cycle-late-main' },
+        `Repère dépassé de ${days} jour${days > 1 ? 's' : ''}.`
+      ),
+      el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        level === 'long'
+          ? 'Si tes règles sont arrivées sans que tu les notes, complète la journée : le repère se recalculera.'
+          : 'Un cycle qui se décale est courant.'
+      ),
+      el('div', { class: 'card-actions' }, [
+        el('button', {
+          type: 'button',
+          class: 'btn btn-sm',
+          onClick: () => dismissLate(level, stats.lastStart),
+        }, 'C’est normal'),
+      ]),
+    ]);
+  }
+
+  /**
+   * Le repere, et ce sur quoi il repose.
+   *
+   * L'ecran reste factuel : le detail du calcul est derriere le « i », et la
+   * mise en garde complete dans « Comment ça marche ». Les premieres versions
+   * repetaient ici, mot pour mot, ce que la premiere ouverture avait deja dit --
+   * lu une fois, puis jamais plus.
+   */
+  function forecastBlock(stats, prediction, periods, late) {
     if (prediction.reason === 'off') return null;
 
+    const lines = [];
+
     if (prediction.reason === 'suppressed') {
-      lines.push(
-        el('p', { class: 'card-hint', style: { marginBottom: '0' } },
-          'Ton cycle est noté comme suspendu : afficher une moyenne des cycles ' +
-            'précédents ne voudrait rien dire. Tout ce que tu notes reste enregistré.'
-        )
-      );
+      lines.push(el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        'Cycle suspendu : pas de repère.'
+      ));
       return el('div', { class: 'cycle-forecast' }, lines);
     }
 
     if (prediction.reason === 'too-variable') {
       lines.push(
-        el('p', {}, 'Pas de repère : tes cycles varient trop pour qu’une moyenne en dise quelque chose.'),
+        el('p', {}, `Pas de repère : tes cycles vont de ${stats.min} à ${stats.max} jours.`),
         el('p', { class: 'card-hint', style: { marginBottom: '0' } },
-          `Ils vont de ${stats.min} à ${stats.max} jours. C’est une information en ` +
-            'soi, et elle peut intéresser un professionnel de santé — tes saisies ' +
-            'restent complètes et exportables.'
+          'Tes saisies restent complètes et exportables.'
         )
       );
       return el('div', { class: 'cycle-forecast' }, lines);
     }
 
     if (prediction.reason === 'not-enough') {
-      lines.push(
-        el('p', {}, 'Pas encore de repère de prochaines règles.'),
-        el('p', { class: 'card-hint', style: { marginBottom: '0' } },
-          stats.starts.length
-            ? 'Il faut deux cycles complets pour calculer une moyenne. En attendant, ' +
-              'tu peux indiquer ta durée habituelle dans ton profil.'
-            : 'Note tes règles quand elles arrivent : le repère se calculera tout seul.'
-        )
-      );
+      lines.push(el('p', { style: { marginBottom: '0' } },
+        stats.starts.length
+          ? 'Repère disponible après deux cycles complets.'
+          : 'Note tes règles : le repère se calculera tout seul.'
+      ));
+      if (stats.starts.length) {
+        lines.push(el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+          'Tu peux aussi indiquer ta durée habituelle dans ton profil.'
+        ));
+      }
       return el('div', { class: 'cycle-forecast' }, lines);
     }
 
-    // Le retard se lit a la date affichee, pas a la date du jour : toute la
-    // carte decrit la journee qu'on regarde, et une journee d'il y a trois mois
-    // annoncerait sinon un retard de trois mois.
-    const late = daysLate(prediction, date);
-
-    lines.push(
-      el('p', { class: 'cycle-forecast-main' },
-        prediction.exact
-          ? `Prochaines règles autour du ${formatDayMonth(prediction.date)}`
-          : `Prochaines règles entre le ${formatDayRange(prediction.from, prediction.to)}`
-      )
-    );
-
-    lines.push(
-      el('p', { class: 'card-hint' },
+    // Le detail du calcul : disponible, jamais impose.
+    const detail = info({
+      id: 'cycle-forecast-info',
+      label: 'Sur quoi repose ce repère',
+      text: [
         prediction.source === 'declared'
-          ? `D’après la durée que tu as indiquée (${prediction.average} jours). ` +
-            'Le repère s’ajustera sur tes cycles réels dès que tu en auras noté deux.'
+          ? `Calculé sur la durée que tu as indiquée (${prediction.average} jours), ` +
+            'faute de cycles observés. Tes deux prochains cycles prendront le relais. '
           : `Moyenne de tes ${prediction.n} derniers cycles : ${prediction.average} jours` +
-            (stats.spread ? `, de ${stats.min} à ${stats.max}.` : '.') +
-            (prediction.exact
-              ? ` Fourchette du ${formatDayMonth(prediction.from)} au ${formatDayMonth(prediction.to)}.`
-              : '')
-      )
-    );
+            (stats.spread ? `, de ${stats.min} à ${stats.max}. ` : '. ') +
+            `Fourchette du ${formatDayMonth(prediction.from)} au ${formatDayMonth(prediction.to)}. `,
+        'Ni un moyen de contraception, ni un outil de conception.',
+      ],
+    });
 
-    if (late) {
-      // Factuel et sans point d'exclamation : un retard n'est pas une alerte, et
-      // l'application n'a aucune idee de ce qu'il signifie pour la personne.
-      lines.push(
-        el('p', { class: 'card-hint' },
-          `Le repère est dépassé de ${late} jour${late > 1 ? 's' : ''}. Un cycle qui ` +
-            'se décale est courant, et Daylog n’en tire aucune conclusion.'
-        )
-      );
-    }
+    // « Prochaines » ne va plus quand la date est passee : « Règles attendues
+    // autour du 15 juillet » se lit aussi bien avant qu'apres.
+    const tete = late ? 'Règles attendues' : 'Prochaines règles';
+
+    lines.push(
+      el('div', { class: 'cycle-forecast-head' }, [
+        el('p', { class: 'cycle-forecast-main' },
+          prediction.exact
+            ? `${tete} autour du ${formatDayMonth(prediction.date)}`
+            : `${tete} entre le ${formatDayRange(prediction.from, prediction.to)}`
+        ),
+        detail.button,
+      ]),
+      detail.panel
+    );
 
     // La duree des regles vient des episodes observes ; a defaut, de ce que la
     // personne a annonce. La phrase dit laquelle des deux, parce que « en
@@ -373,23 +419,14 @@ export async function render({ store }) {
     const declaredPeriod = usableDeclaredPeriod(capabilities.periodLength);
     if (periods.average || declaredPeriod) {
       const days = periods.average || declaredPeriod;
-      lines.push(
-        el('p', { class: 'card-hint' },
-          periods.average
-            ? `Tes règles durent ${days} jour${days > 1 ? 's' : ''} en moyenne.`
-            : `Tu as indiqué des règles de ${days} jour${days > 1 ? 's' : ''}.`
-        )
-      );
+      lines.push(el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        periods.average
+          ? `Règles : ${days} jour${days > 1 ? 's' : ''} en moyenne.`
+          : `Règles : ${days} jour${days > 1 ? 's' : ''} d’après toi.`
+      ));
     }
 
-    lines.push(
-      el('p', { class: 'card-hint', style: { marginBottom: '0' } },
-        'C’est un repère calculé sur tes cycles précédents, rien de plus : ni un ' +
-          'moyen de contraception, ni un outil de conception.'
-      )
-    );
-
-    return el('div', { class: 'cycle-forecast' }, lines);
+    return el('div', { class: 'cycle-forecast' }, [...lines, lateBanner(late, stats)]);
   }
 
   /** Ligne de tete : ou en est le cycle, en un coup d'oeil. */
@@ -416,6 +453,14 @@ export async function render({ store }) {
       mode,
       declared: capabilities.cycleLength,
       forecast: capabilities.cycleForecast !== false,
+    });
+    // Le retard se lit a la date affichee, pas a la date du jour : toute la
+    // carte decrit la journee qu'on regarde, et une journee d'il y a trois mois
+    // annoncerait sinon un retard de trois mois.
+    const late = lateness(prediction, date, {
+      mode,
+      lastStart: stats.lastStart,
+      dismissed: capabilities.cycleLateDismissed,
     });
     const phase = cyclePhase({ stats, prediction, date, flow });
 
@@ -447,7 +492,7 @@ export async function render({ store }) {
 
       symptomsBlock(symptoms),
 
-      forecastBlock(stats, prediction, periods),
+      forecastBlock(stats, prediction, periods, late),
 
       (flow !== null || symptoms.size > 0) &&
         el('div', { class: 'card-actions' }, [

@@ -424,3 +424,41 @@ export function daysLate(prediction, date) {
   const late = diffDays(prediction.to, date);
   return late > 0 ? late : null;
 }
+
+/**
+ * Paliers de retard.
+ *
+ * Un seul niveau d'information ne convient pas : trois jours au-dela d'une
+ * fourchette ne se dit pas comme trois semaines. Mais monter en intensite est
+ * exactement ce qu'il ne faut pas faire ici -- l'application ne sait rien de ce
+ * qu'un retard signifie pour la personne qui le lit, et une alerte rouge
+ * fabriquerait de l'angoisse a partir d'une moyenne arithmetique.
+ *
+ * D'ou ces trois paliers, qui montent en PRECISION et non en gravite :
+ *
+ *   'inside'  dans la fourchette, ou juste apres : rien a dire
+ *   'late'    le repere est passe : on le constate, en rappelant que c'est courant
+ *   'long'    au-dela de trois semaines : on suggere de verifier ses saisies,
+ *             puis on s'arrete -- au-dela commence le diagnostic, qui n'est
+ *             pas le role de Daylog
+ *
+ * Un cycle declare irregulier n'atteint jamais le dernier palier : chez
+ * quelqu'un dont les cycles varient de trente jours, un mois d'ecart n'est pas
+ * un evenement, et le lui signaler serait lui rappeler tous les mois que son
+ * corps ne rentre pas dans la moyenne.
+ */
+export const LONG_DELAY_DAYS = 22;
+
+export function lateness(prediction, date, { mode = null, lastStart = null, dismissed = null } = {}) {
+  const days = daysLate(prediction, date);
+  if (!days) return null;
+
+  const level = days >= LONG_DELAY_DAYS && mode !== 'irregular' ? 'long' : 'late';
+
+  // « C'est normal » met le bandeau en veille pour le cycle en cours et pour ce
+  // palier-la : ce qui a ete ecarte une fois ne revient pas le lendemain a
+  // l'identique. Le prochain cycle repart de zero, sans rien a re-ecarter.
+  if (dismissed && dismissed.start === lastStart && dismissed.level === level) return null;
+
+  return { days, level, expected: prediction.date };
+}

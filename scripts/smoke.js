@@ -706,10 +706,6 @@ check(
   'le repere est annonce comme une fourchette, pas comme une date',
   /entre le .+ et le /.test(cycleText)
 );
-check(
-  "l'avertissement contraception/conception accompagne le repere",
-  /ni un moyen de contraception, ni un outil de conception/.test(cycleText)
-);
 
 /*
  * Deux verifications de fond, et non de forme.
@@ -764,6 +760,135 @@ check(
   'reactive, il retrouve ce qui avait ete note',
   (await page.locator('.flow-btn.is-selected').count()) === 1
 );
+
+// Le detail du calcul est disponible, jamais impose : l'ecran reste factuel.
+check(
+  'le detail du repere est derriere un « i »',
+  (await page.locator('.info-btn').count()) === 1 &&
+    (await page.locator('.info-panel').first().isHidden())
+);
+await page.locator('.info-btn').click();
+check(
+  'le « i » revele l explication et s annonce ouvert',
+  (await page.locator('.info-panel').first().isVisible()) &&
+    (await page.locator('.info-btn').getAttribute('aria-expanded')) === 'true'
+);
+check(
+  "l'avertissement contraception/conception vit dans ce detail",
+  (await page.locator('.info-panel').first().innerText()).includes('contraception')
+);
+
+/*
+ * Bandeau de retard.
+ *
+ * On force un historique de trois cycles reguliers termines il y a longtemps :
+ * le repere est donc largement depasse, ce qu'aucune saisie a la main ne
+ * permettrait de reproduire dans un test.
+ *
+ * La saisie du jour est d'abord effacee -- sinon elle ouvrirait un nouveau
+ * cycle aujourd'hui, et il n'y aurait aucun retard a signaler.
+ */
+await page.locator('.flow-btn.is-selected').click();
+await page.waitForTimeout(2400);
+check(
+  'effacer l intensite du jour la remet a non renseignee',
+  (await page.locator('.flow-btn.is-selected').count()) === 0
+);
+
+await page.evaluate(async () => {
+  const key = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const db = await new Promise((r) => {
+    const q = indexedDB.open('daylog');
+    q.onsuccess = () => r(q.result);
+  });
+  const t = db.transaction(['days', 'summaries'], 'readwrite');
+  const today = new Date();
+  for (const back of [96, 68, 40]) {
+    for (let i = 0; i < 4; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - back + i);
+      const date = key(d);
+      t.objectStore('days').put({
+        date,
+        schemaVersion: 1,
+        modules: { cycle: { flow: 3 } },
+      });
+      t.objectStore('summaries').put({ date, flow: 3 });
+    }
+  }
+  await new Promise((r) => { t.oncomplete = r; });
+});
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForSelector('.cycle-late');
+await scanAccents();
+
+const lateText = await page.locator('.cycle-late').innerText();
+check('un retard est signale', /dépassé de \d+ jours/.test(lateText), lateText.split('\n')[0]);
+check(
+  'le retard ne dramatise pas',
+  !/urgent|anormal|inquiét|consulte|alerte|attention/i.test(lateText),
+  lateText.replace(/\n/g, ' ')
+);
+// Le fond ne doit jamais virer au rouge : l'application ne sait rien de ce
+// qu'un retard signifie pour la personne qui le lit.
+const lateColors = await page.evaluate(() => {
+  const node = document.querySelector('.cycle-late');
+  const s = getComputedStyle(node);
+  return [s.borderLeftColor, s.backgroundColor, s.color].join(' | ');
+});
+check(
+  'aucune couleur d alerte sur le retard',
+  !/rgb\(1[78][0-9], 3[0-9], 3[0-9]\)/.test(lateColors),
+  lateColors
+);
+
+await page.locator('.cycle-late .btn').click();
+await page.waitForTimeout(400);
+check(
+  '« c est normal » fait taire le bandeau',
+  (await page.locator('.cycle-late').count()) === 0
+);
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForSelector('.flow-row');
+check(
+  'et il ne revient pas au lancement suivant',
+  (await page.locator('.cycle-late').count()) === 0
+);
+
+// ---------------------------------------------------------------- documentation
+await navigate('Comment ça marche');
+await page.waitForSelector('.doc');
+await scanAccents();
+check(
+  "l'ecran « comment ça marche » s ouvre depuis le menu",
+  (await page.locator('.doc').count()) >= 4
+);
+check(
+  'ses sections sont repliees a l ouverture',
+  (await page.locator('.doc[open]').count()) === 0
+);
+await page.locator('.doc-head').first().click();
+check(
+  'une section se deplie',
+  (await page.locator('.doc[open]').count()) === 1
+);
+// Tout deplier avant de lire : le texte d'un <details> ferme n'est pas rendu,
+// donc ni le controle qui suit ni le garde-fou orthographique ne le verraient.
+await page.evaluate(() => document.querySelectorAll('details.doc').forEach((d) => (d.open = true)));
+await scanAccents();
+const docText = await page.locator('#main').innerText();
+check(
+  'la documentation explique le repere de cycle',
+  docText.includes('Le repère de cycle')
+);
+check(
+  "l'avertissement medical complet vit ici",
+  docText.includes('pas un dispositif médical')
+);
+
+await navigate("Aujourd'hui");
+await page.waitForSelector('[data-slot]');
 
 // ══════════════════════════════════════════════════ bilan
 

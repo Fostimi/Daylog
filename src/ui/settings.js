@@ -183,8 +183,7 @@ export function createSettingsView({ store, root, go, alert = null }) {
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title' }, 'Sauvegarder'),
           el('p', { class: 'card-hint' },
-            'Tes notes ne sont que sur cet appareil. Si tu le perds, elles sont ' +
-              'perdues avec lui — la sauvegarde est ta seule protection.'
+            'Tes notes ne sont que sur cet appareil.'
           ),
 
           el('dl', { class: 'facts' }, [
@@ -217,8 +216,7 @@ export function createSettingsView({ store, root, go, alert = null }) {
           ]),
 
           el('p', { class: 'card-hint', style: { marginTop: '0.75rem', marginBottom: '0' } },
-            "Le fichier est remis au système : c'est toi qui choisis où il va. " +
-              "L'application ne l'envoie nulle part."
+            "Le fichier est remis au système : c'est toi qui choisis où il va."
           ),
         ]),
 
@@ -226,8 +224,7 @@ export function createSettingsView({ store, root, go, alert = null }) {
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title' }, 'Restaurer'),
           el('p', { class: 'card-hint' },
-            'Nouveau téléphone, ou retour en arrière. Par défaut, une journée ' +
-              'déjà présente sur cet appareil est conservée si elle est plus récente.'
+            'Par défaut, une journée déjà présente est conservée si elle est plus récente.'
           ),
           el('label', { class: 'onb-option', for: 'restore-replace' }, [
             el('input', { type: 'checkbox', id: 'restore-replace', class: 'onb-input' }),
@@ -253,9 +250,7 @@ export function createSettingsView({ store, root, go, alert = null }) {
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title' }, 'Partager une partie seulement'),
           el('p', { class: 'card-hint' },
-            'Pour montrer trois mois de suivi à un médecin ou à une diététicienne, ' +
-              'sans donner accès au reste. Ton journal et tes humeurs ne partent ' +
-              'jamais dans un extrait.'
+            'Ton journal et tes humeurs ne partent jamais dans un extrait.'
           ),
           el('div', { class: 'card-actions' },
             allModules()
@@ -274,8 +269,7 @@ export function createSettingsView({ store, root, go, alert = null }) {
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title' }, 'Ce que je suis'),
           el('p', { class: 'card-hint' },
-            'Active ou désactive un suivi à tout moment. Désactiver ne supprime ' +
-              'rien : tes données restent, elles sont simplement masquées.'
+            'Désactiver ne supprime rien : les données restent, elles sont masquées.'
           ),
           // Seuls les modules dont les conditions sont reunies : proposer
           // « Cycle menstruel » a quelqu'un qui a repondu ne pas en avoir

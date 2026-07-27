@@ -96,9 +96,7 @@ export function createBilanView({ store, root, go, alert = null }) {
         ),
 
       el('p', { class: 'card-hint', style: { marginBottom: '0' } },
-        'Sur les douze derniers mois, et non sur la période choisie plus haut : ' +
-          'un cycle ne se lit pas sur sept jours. Ce sont des repères calculés sur ' +
-          'ce que tu as noté, ni un moyen de contraception, ni un outil de conception.'
+        'Sur les douze derniers mois, pas sur la période choisie plus haut.'
       ),
     ]);
   }
@@ -160,10 +158,6 @@ export function createBilanView({ store, root, go, alert = null }) {
             fact('Sommeil', formatNumber(round(meanOf(rows, 'sleepH'), 1), { digits: 1 }), 'h'),
             fact('Eau', formatNumber(round(meanOf(rows, 'waterMl'), 0)), 'ml / jour'),
           ]),
-          el('p', { class: 'card-hint', style: { marginTop: '0.5rem', marginBottom: '0' } },
-            'Les journées non renseignées sont ignorées, jamais comptées comme des ' +
-              'zéros : une moyenne ne décrit que ce que tu as réellement noté.'
-          ),
         ]),
 
         cycleBlock,
@@ -217,8 +211,7 @@ export function createBilanView({ store, root, go, alert = null }) {
         ]),
 
         el('p', { class: 'footer-note' },
-          "Daylog est un outil de suivi, pas un dispositif médical. Ces chiffres " +
-            'décrivent ce que tu as noté, ils ne diagnostiquent rien.'
+          'Outil de suivi, pas un dispositif médical.'
         ),
       ]),
     ]);
