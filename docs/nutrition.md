@@ -5,7 +5,9 @@ avoir à le re-débattre. Les formules, elles, sont dans
 [calculs-metaboliques.md](calculs-metaboliques.md) et appliquées par
 [`src/core/nutrition.js`](../src/core/nutrition.js).
 
-État : le calcul est écrit et testé. **Aucun écran n'existe encore.**
+État : **le mode express est en place** — profil, base d'aliments, saisie du
+jour, repas enregistrés, bilan. Le mode détaillé (micronutriments) viendra
+après, une fois qu'on saura ce que celui-ci donne à l'usage.
 
 ## Le problème à résoudre
 
@@ -85,9 +87,32 @@ transformer un choix d'unité en casse-tête.
 Le recalcul dynamique pendant la saisie (voir les macros bouger quand on change
 la quantité) est souhaitable mais **relève du polissage** — pas du premier jet.
 
-## Ce qui est déjà écrit
+## Ce que ça donne à l'écran
 
-`src/core/nutrition.js`, 22 tests. Quatre garde-fous :
+Quatre moments repliés — matin, midi, soir, à côté. On ouvre celui qu'on veut,
+on tape trois lettres, on choisit une quantité. Le total du jour est en haut,
+avec les cibles à côté **en gris** : un repère, jamais une note.
+
+Deux détails qui ont demandé une correction en cours de route, tous deux
+trouvés par le test de bout en bout :
+
+- **le formulaire de quantité n'appartient qu'à un seul moment.** Il s'affichait
+  dans les quatre à la fois, donc quatre fois le même identifiant dans la page —
+  ce qui casse l'association libellé/champ et l'annonce aux lecteurs d'écran ;
+- **le bouton « Ajouter » suit la saisie.** Il ne se réactivait qu'au redessin
+  complet, et redessiner à chaque frappe fait perdre le focus au bout d'un
+  caractère. Le bouton et l'aperçu se mettent donc à jour seuls, sans reconstruire
+  le bloc.
+
+Sans recherche, seuls **ses propres aliments** sont proposés. Dérouler huit
+entrées de la base livrée sans rapport avec la personne remplissait l'écran de
+bruit.
+
+## Ce qui est écrit
+
+`src/core/nutrition.js` (22 tests) et `src/core/foods.js` (21 tests).
+
+Quatre garde-fous côté énergie :
 
 1. **La cible ne descend jamais sous le métabolisme de base**, quelle que soit
    la vitesse choisie. Le déficit est plafonné à 500 kcal dans les deux sens.
@@ -101,14 +126,22 @@ la quantité) est souhaitable mais **relève du polissage** — pas du premier j
 Le niveau d'activité est demandé **séparément de la mobilité** et jamais déduit
 d'elle : une personne en fauteuil peut être sportive de haut niveau.
 
-## Ordre de construction
+Et côté aliments, deux règles vérifiées par les tests :
 
-1. **Profil** — les champs manquants : taille, année de naissance, base de
-   calcul, niveau d'activité, objectif, poids. Sans eux, aucun chiffre ne peut
-   s'afficher.
-2. **Bibliothèque** — base embarquée, aliments personnels, repas nommés.
-3. **Écran express** — saisie du jour, totaux, comparaison aux cibles.
-4. **Bilan** — énergie et macros sur la période.
+- **la table livrée est contrôlée** : pas de doublon, pas d'unité incohérente, et
+  l'énergie annoncée doit rester cohérente avec les macronutriments — sauf pour
+  l'alcool, dont l'éthanol apporte 7 kcal/g sans être un macronutriment ;
+- **la recherche ignore casse, accents et ligatures.** Taper « oeuf » doit
+  trouver « Œuf » : `NFD` ne décompose pas la ligature, et le cas est fréquent en
+  français (œuf, bœuf, cœur, sœur).
+
+## Ce qui reste
+
+- **Recalcul dynamique** pendant la saisie de la quantité : l'aperçu existe, mais
+  les unités demandent encore un aller-retour. Relève du polissage.
+- **Suivi du poids au jour le jour**, qui viendra avec le module santé — et qui
+  branchera le recalage automatique de l'estimation sur les faits observés.
+- **Mode détaillé et micronutriments.**
 
 Le mode détaillé et les micronutriments viennent après, et les seuils de
 micronutriments sont rattachés à la physiologie et non au genre déclaré — le fer

@@ -157,6 +157,8 @@ export function createBilanView({ store, root, go, alert = null }) {
             fact('Stress', formatNumber(round(meanOf(rows, 'stress'), 1), { digits: 1 }), '/ 10'),
             fact('Sommeil', formatNumber(round(meanOf(rows, 'sleepH'), 1), { digits: 1 }), 'h'),
             fact('Eau', formatNumber(round(meanOf(rows, 'waterMl'), 0)), 'ml / jour'),
+            fact('Calories', formatNumber(round(meanOf(rows, 'kcal'), 0)), 'kcal / jour'),
+            fact('Protéines', formatNumber(round(meanOf(rows, 'protein'), 0)), 'g / jour'),
           ]),
         ]),
 
@@ -197,6 +199,18 @@ export function createBilanView({ store, root, go, alert = null }) {
             values: value('sleepH'),
             label: 'Sommeil',
             unit: 'h',
+          }),
+        ]),
+
+        // Les graphiques ne s'affichent que si la serie contient quelque chose :
+        // une carte de trous n'apprend rien et occupe un ecran entier.
+        tracked > 0 && value('kcal').some((v) => v !== null) && el('div', { class: 'card' }, [
+          barChart({
+            title: 'Calories',
+            labels,
+            values: value('kcal'),
+            label: 'Calories',
+            unit: 'kcal',
           }),
         ]),
 

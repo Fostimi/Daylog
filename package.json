@@ -1,6 +1,6 @@
 {
   "name": "daylog",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Suivi quotidien local-first. Aucune donnee ne quitte l'appareil.",

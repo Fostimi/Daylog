@@ -63,6 +63,40 @@ export const WEIGHT_GOALS = [
   { id: 'gain', delta: 500, label: 'Prendre', hint: 'environ 0,5 kg par semaine' },
 ];
 
+/**
+ * Bases de calcul proposees.
+ *
+ * Les formules publiees ont ete calibrees sur deux groupes de population, et il
+ * faut bien choisir une constante. La deduire d'une case « homme / femme »
+ * serait faux pour une partie des gens et blessant pour une autre : on decrit
+ * donc ce que chaque variante DECRIT, et on laisse choisir.
+ *
+ * La voie par masse grasse mesuree ne pose meme pas la question -- le corps y
+ * est decrit par ce qu'il est, et c'est la plus juste quand elle est possible.
+ */
+export const CALC_BASES = [
+  {
+    id: 'lean-mass',
+    label: 'À partir de ma masse grasse mesurée',
+    hint: 'La plus juste, si tu l’as mesurée. Aucune variante à choisir.',
+  },
+  {
+    id: 'a',
+    label: 'Variante A',
+    hint: 'Calibrée sur des corps à masse musculaire plus élevée en moyenne',
+  },
+  {
+    id: 'b',
+    label: 'Variante B',
+    hint: 'Calibrée sur des corps à masse grasse plus élevée en moyenne',
+  },
+  {
+    id: 'interpolated',
+    label: 'Entre les deux, en transition',
+    hint: 'Glisse d’une variante à l’autre sur trois ans (hormonothérapie)',
+  },
+];
+
 /** Energie contenue dans un kilo de masse corporelle, en kcal. */
 export const KCAL_PER_KG = 7700;
 

@@ -318,6 +318,19 @@ export function createExpressView({ store, root, go }) {
    *
    * Un module qui echoue a se charger n'empeche jamais le reste de fonctionner.
    */
+  /**
+   * Ouvre une journee precise.
+   *
+   * Passe aux ecrans de module : le suivi de cycle en a besoin pour renvoyer
+   * vers le jour ou un debut de regles a ete note, quand c'est la-bas que la
+   * correction doit se faire et nulle part ailleurs.
+   */
+  async function goDate(next) {
+    if (isFuture(next)) return;
+    await store.loadDay(next);
+    render();
+  }
+
   async function renderModules(slot) {
     const active = enabledModules(store.getModuleState(), store.getCapabilities()).filter(
       (m) => typeof m.view === 'function'
@@ -326,7 +339,7 @@ export function createExpressView({ store, root, go }) {
     for (const mod of active) {
       try {
         const { render: renderView } = await mod.view();
-        const node = await renderView({ store });
+        const node = await renderView({ store, goDate });
         // L'ecran a pu changer pendant le telechargement (changement de jour) :
         // on n'insere que si l'emplacement est toujours dans la page.
         if (slot.isConnected) slot.appendChild(node);

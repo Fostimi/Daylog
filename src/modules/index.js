@@ -142,11 +142,15 @@ export function registerCoreModules() {
     icon: 'meal',
     defaultEnabled: true,
     order: 50,
+    view: () => import('./views/nutrition.js'),
     summarize(data) {
-      const meals = data?.meals || [];
-      if (!meals.length) return {};
+      // Chaque entree porte deja ses valeurs, figees au moment de la saisie :
+      // le resume n'a qu'a les additionner, et un champ non renseigne est
+      // exclu du total plutot que compte pour zero.
+      const items = data?.items || [];
+      if (!items.length) return {};
       const total = (key) => {
-        const vals = meals.map((m) => m?.[key]).filter((v) => typeof v === 'number');
+        const vals = items.map((m) => m?.[key]).filter((v) => typeof v === 'number');
         return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0)) : null;
       };
       return {
@@ -154,7 +158,7 @@ export function registerCoreModules() {
         protein: total('protein'),
         carbs: total('carbs'),
         fat: total('fat'),
-        meals: meals.length || null,
+        foods: items.length || null,
       };
     },
   });

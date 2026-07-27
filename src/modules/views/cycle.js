@@ -50,7 +50,7 @@ import {
  */
 const HISTORY_DAYS = 400;
 
-export async function render({ store }) {
+export async function render({ store, goDate = null }) {
   const container = el('div', { class: 'card' });
   const date = store.getDate();
   const capabilities = store.getCapabilities() || {};
@@ -219,7 +219,46 @@ export async function render({ store }) {
     }, buttons);
   }
 
-  function startRow() {
+  /**
+   * « Premier jour de ces regles ».
+   *
+   * Trouve au premier essai d'usage : la case restait cochable tous les jours
+   * de l'episode, et rien n'empechait de designer trois « premiers jours »
+   * d'affilee. Pire, la correction ne corrigeait rien -- deux debuts separes de
+   * moins de douze jours etant fusionnes, c'est toujours le premier qui datait
+   * le cycle, et cocher aujourd'hui n'avait aucun effet visible.
+   *
+   * Des lors que l'episode a commence un autre jour, on n'affiche donc plus une
+   * case a cocher mais ce qui a ete retenu, et un chemin vers l'endroit ou la
+   * correction a un sens : la journee concernee.
+   */
+  function startRow(periods) {
+    const starts = periodStarts(rows());
+    const currentStart = [...starts].reverse().find((d) => d <= date) || null;
+    const ongoing = periods.ongoing;
+
+    // Le debut retenu appartient-il bien a l'episode en cours ? Sinon il date
+    // du cycle precedent, et c'est aujourd'hui qu'il faut pouvoir designer.
+    const startedEarlier =
+      currentStart && currentStart !== date && ongoing && currentStart >= ongoing.start;
+
+    if (startedEarlier) {
+      return el('div', { class: 'cycle-start-note' }, [
+        el('p', {}, `Début de ces règles : ${formatDayMonth(currentStart)}.`),
+        el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+          'Si ce n’est pas le bon jour, c’est là-bas qu’il faut décocher.'
+        ),
+        goDate &&
+          el('div', { class: 'card-actions' }, [
+            el('button', {
+              type: 'button',
+              class: 'btn btn-sm',
+              onClick: () => goDate(currentStart),
+            }, `Ouvrir le ${formatDayMonth(currentStart)}`),
+          ]),
+      ]);
+    }
+
     const explicit = data().cycleStart;
     const detected = detectedStart();
     const checked = explicit === undefined || explicit === null ? detected : explicit;
@@ -246,18 +285,6 @@ export async function render({ store }) {
     ]);
   }
 
-  /**
-   * Symptomes, replies par defaut.
-   *
-   * Onze pastilles font sept rangees sur un telephone : depliees en
-   * permanence, elles occupaient la moitie de l'ecran du jour tous les jours,
-   * y compris pour quelqu'un qui ne note que son flux. Le repliage suit le
-   * meme principe que les check-ins : ouvert s'il y a quelque chose dedans,
-   * ferme sinon, et le resume dit ce qui est note sans avoir a ouvrir.
-   *
-   * `<details>` plutot qu'un repliage maison : le navigateur fournit le
-   * clavier, l'annonce aux lecteurs d'ecran et la recherche dans la page.
-   */
   function symptomsBlock(selected) {
     const labels = SYMPTOMS.filter((s) => selected.has(s.id)).map((s) => s.label);
     // `symptomsOpen` retient ce que la personne a fait du bloc. Sans lui, chaque
@@ -488,7 +515,7 @@ export async function render({ store }) {
         flowRow(flow),
       ]),
 
-      flow !== null && flow > 0 && startRow(),
+      flow !== null && flow > 0 && startRow(periods),
 
       symptomsBlock(symptoms),
 

@@ -27,6 +27,7 @@ application.
 | ✅ | Bilan, graphiques et phrases de synthèse |
 | ✅ | Cycle menstruel : suivi, symptômes et repère |
 | ✅ | Écran « Comment ça marche » : ce que l'app calcule, et ce qu'elle refuse |
+| ✅ | Alimentation : base d'aliments, aliments et repas à soi, cibles |
 | ⬜ | Activité physique, santé et traitements, argent, apprentissage |
 | ⬜ | Verrouillage par code, notifications, installation depuis les stores |
 
@@ -70,9 +71,9 @@ npm run build    # version de production dans dist/
 ## Vérifier
 
 ```bash
-npm test                  # 155 tests unitaires
+npm test                  # 176 tests unitaires
 npm run test:timezones    # la suite complète dans 10 fuseaux horaires
-npm run smoke             # 143 vérifications dans un vrai navigateur
+npm run smoke             # 153 vérifications dans un vrai navigateur
 npm run verify            # tout l'enchaînement
 ```
 
@@ -104,7 +105,7 @@ Ils tranchent les arbitrages, dans cet ordre :
   pourquoi l'identité de genre n'entre dans aucune d'elles
 - [Suivi du cycle](docs/cycle.md) — les calculs, et ce que Daylog refuse de
   calculer
-- [Nutrition](docs/nutrition.md) — les décisions de conception, avant les écrans
+- [Nutrition](docs/nutrition.md) — les décisions de conception et la base d'aliments
 
 ## Sauvegardes
 

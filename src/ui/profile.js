@@ -23,6 +23,8 @@ import {
   sanitizeDeclared, DECLARED_CYCLE_RANGE, DECLARED_PERIOD_RANGE,
 } from '../modules/profile-options.js';
 import * as db from '../core/db.js';
+import { ACTIVITY_LEVELS, WEIGHT_GOALS, CALC_BASES, energyNeeds } from '../core/nutrition.js';
+import { formatNumber } from '../core/i18n.js';
 
 export function createProfileView({ store, root, go, onReset, alert = null }) {
   let status = null;
@@ -53,6 +55,24 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
     await store.setCapabilities({ [key]: value });
   }
 
+  /** Ecrit dans `profile.body`. `quiet` : sans reconstruire l'ecran. */
+  async function patchBody(patch, { quiet = false } = {}) {
+    const current = store.getProfile();
+    await store.setProfile({ ...current, body: { ...current.body, ...patch } });
+    if (!quiet) setStatus('Modification enregistrée.');
+  }
+
+  async function patchGoals(patch, { quiet = false } = {}) {
+    const current = store.getProfile();
+    await store.setProfile({ ...current, goals: { ...current.goals, ...patch } });
+    if (!quiet) setStatus('Modification enregistrée.');
+  }
+
+  function numberOrNull(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
   /**
    * Efface tout et repart de la premiere ouverture.
    *
@@ -81,6 +101,194 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
   async function redoOnboarding() {
     await store.setSettings({ onboardedAt: null });
     onReset();
+  }
+
+  /**
+   * Ton corps.
+   *
+   * Ces trois chiffres ne servent qu'aux calculs energetiques, et rien d'autre
+   * dans l'application ne les regarde. Ils restent facultatifs : sans eux,
+   * aucun besoin n'est affiche -- mais tout le reste fonctionne.
+   */
+  function bodyCard(profile) {
+    const body = profile.body || {};
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title' }, 'Ton corps'),
+      el('p', { class: 'card-hint' }, 'Uniquement pour les calculs de nutrition.'),
+      numberField({
+        id: 'p-height',
+        label: 'Taille',
+        value: body.heightCm ?? null,
+        step: 1,
+        min: 80,
+        max: 250,
+        unit: 'cm',
+        onInput: (v) => patchBody({ heightCm: numberOrNull(v) }, { quiet: true }),
+      }).node,
+      numberField({
+        id: 'p-weight',
+        label: 'Poids',
+        value: body.weightKg ?? null,
+        step: 0.1,
+        min: 25,
+        max: 300,
+        unit: 'kg',
+        onInput: (v) =>
+          patchBody(
+            { weightKg: numberOrNull(v), weightMeasuredAt: new Date().toISOString() },
+            { quiet: true }
+          ),
+      }).node,
+      numberField({
+        id: 'p-birth-year',
+        label: 'Année de naissance',
+        value: body.birthYear ?? null,
+        step: 1,
+        min: 1900,
+        max: new Date().getFullYear(),
+        unit: '',
+        onInput: (v) => patchBody({ birthYear: numberOrNull(v) }, { quiet: true }),
+      }).node,
+    ]);
+  }
+
+  /**
+   * La base de calcul.
+   *
+   * L'ecran le plus delicat du profil apres le cycle. Les formules publiees
+   * ont ete calibrees sur deux groupes de population, et il faut bien choisir
+   * une constante -- mais la deduire d'une case « homme / femme » serait faux
+   * pour une partie des gens et blessant pour une autre.
+   *
+   * On decrit donc ce que chaque variante DECRIT, et on laisse choisir. La voie
+   * par masse grasse mesuree, elle, ne pose meme pas la question : le corps y
+   * est decrit par ce qu'il est.
+   */
+  function basisCard(profile) {
+    const body = profile.body || {};
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title' }, 'Base de calcul'),
+      choice({
+        legend: 'Sur quelle base estimer ta dépense au repos ?',
+        name: 'p-basis',
+        options: CALC_BASES,
+        value: body.calcBasis || null,
+        onSelect: (v) => patchBody({ calcBasis: v }),
+        allowNone: true,
+      }),
+      body.calcBasis === 'lean-mass' &&
+        numberField({
+          id: 'p-body-fat',
+          label: 'Masse grasse mesurée',
+          value: body.bodyFatPct ?? null,
+          step: 0.1,
+          min: 3,
+          max: 70,
+          unit: '%',
+          onInput: (v) => patchBody({ bodyFatPct: numberOrNull(v) }, { quiet: true }),
+        }).node,
+      body.calcBasis === 'lean-mass' &&
+        el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+          'Mesurée, jamais estimée : balance à impédance, pince à plis, DEXA.'
+        ),
+    ]);
+  }
+
+  /** Activite et objectif : ce vers quoi la personne va, si elle va quelque part. */
+  function goalsCard(profile) {
+    const goals = profile.goals || {};
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title' }, 'Activité et objectif'),
+      choice({
+        legend: 'Une semaine ordinaire, ça ressemble à quoi ?',
+        name: 'p-activity',
+        options: ACTIVITY_LEVELS,
+        value: goals.activity || null,
+        onSelect: (v) => patchGoals({ activity: v }),
+        allowNone: true,
+      }),
+      choice({
+        legend: 'Un objectif de poids ?',
+        name: 'p-goal',
+        options: WEIGHT_GOALS,
+        value: goals.weight || null,
+        onSelect: (v) => patchGoals({ weight: v }),
+        allowNone: true,
+      }),
+      numberField({
+        id: 'p-protein',
+        label: 'Protéines visées',
+        value: goals.proteinPerKg ?? null,
+        step: 0.1,
+        min: 0.5,
+        max: 4,
+        unit: 'g / kg',
+        onInput: (v) => patchGoals({ proteinPerKg: numberOrNull(v) }, { quiet: true }),
+      }).node,
+      el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        'Aucune valeur par défaut : sans réponse, aucune cible de protéines.'
+      ),
+    ]);
+  }
+
+  /**
+   * Ce que ça donne.
+   *
+   * Affiche le resultat, et surtout ce qui manque pour l'obtenir. Un ecran qui
+   * montre trois tirets sans dire pourquoi laisse chercher.
+   */
+  function needsCard(profile) {
+    const body = profile.body || {};
+    const goals = profile.goals || {};
+    const needs = energyNeeds({
+      weightKg: body.weightKg,
+      heightCm: body.heightCm,
+      ageYears: body.birthYear ? new Date().getFullYear() - body.birthYear : null,
+      body,
+      activity: goals.activity,
+      goal: goals.weight,
+    });
+
+    const NOMS = {
+      weight: 'ton poids',
+      height: 'ta taille',
+      age: 'ton année de naissance',
+      calcBasis: 'la base de calcul',
+      bodyFat: 'ta masse grasse mesurée',
+      activity: 'ton activité',
+      interpolation: 'les détails de la transition',
+    };
+
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title' }, 'Ce que ça donne'),
+      el('dl', { class: 'facts' }, [
+        el('div', { class: 'fact' }, [
+          el('dt', {}, 'Au repos'),
+          el('dd', {}, `${formatNumber(needs.basal ?? null)} kcal`),
+        ]),
+        el('div', { class: 'fact' }, [
+          el('dt', {}, 'Dépense estimée'),
+          el('dd', {}, `${formatNumber(needs.maintenance ?? null)} kcal`),
+        ]),
+        el('div', { class: 'fact' }, [
+          el('dt', {}, 'Cible'),
+          el('dd', {}, `${formatNumber(needs.target ?? null)} kcal`),
+        ]),
+      ]),
+      needs.missing?.length &&
+        el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+          `Il manque ${needs.missing.map((m) => NOMS[m] || m).join(', ')}.`
+        ),
+      needs.floored &&
+        el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+          'Cible relevée au niveau de ta dépense au repos : en dessous, ce ne ' +
+            'serait plus un objectif.'
+        ),
+      needs.target &&
+        el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+          'Une estimation à ± 10 %, qui se corrigera sur tes mesures réelles.'
+        ),
+    ]);
   }
 
   function draw() {
@@ -240,6 +448,11 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
             allowNone: true,
           }),
         ]),
+
+        bodyCard(profile),
+        basisCard(profile),
+        goalsCard(profile),
+        needsCard(profile, capabilities),
 
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title' }, 'Recommencer'),

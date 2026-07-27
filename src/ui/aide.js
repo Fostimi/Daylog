@@ -145,6 +145,33 @@ export function createAideView({ store, root, go, alert = null }) {
             ),
           ]),
 
+        section('Les calculs de nutrition', [
+          p(
+            'La dépense au repos vient d’une formule publiée, choisie dans ton profil. ',
+            el('strong', {}, 'Ton genre n’entre dans aucun calcul'),
+            ' : ce qui compte est une variable physiologique que tu choisis ' +
+              'explicitement, et qui se change à tout moment.'
+          ),
+          p(
+            'Trois chiffres, à ne pas confondre : ce que ton corps dépense au repos, ' +
+              'ce qu’il dépense en tout, et ce que tu vises. Le dernier ne descend ' +
+              'jamais sous le premier, quel que soit l’objectif choisi.'
+          ),
+          p(
+            'Compte ± 10 % d’erreur au départ, pour tout le monde. Si ton poids ' +
+              'évolue autrement que prévu sur six semaines, c’est l’estimation qui a ' +
+              'tort : elle se recale sur ce qui a été observé.'
+          ),
+          p(
+            'Les aliments livrés portent des valeurs ',
+            el('strong', {}, 'indicatives'),
+            ' : le riz d’une marque n’est pas celui d’une table de composition. ' +
+              '« Ajuster ses valeurs » enregistre les tiennes, et elles passent ' +
+              'devant dans les recherches. Une correction ne réécrit jamais les ' +
+              'journées déjà notées.'
+          ),
+        ]),
+
         section('Ce que Daylog n’est pas', [
           p(
             'Un outil de suivi, ',
@@ -163,10 +190,14 @@ export function createAideView({ store, root, go, alert = null }) {
           ),
         ]),
 
-        el('p', { class: 'footer-note' },
+        el('p', { class: 'footer-note' }, [
           'Le code est ouvert. C’est le seul moyen de prouver qu’aucune donnée ne ' +
-            'sort : n’importe qui peut le vérifier.'
-        ),
+            'sort : n’importe qui peut le vérifier.',
+          el('br'),
+          // Utile le jour ou quelqu'un signale un comportement etrange : la
+          // premiere question est toujours « quelle version ? ».
+          `Version ${typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '—'}`,
+        ]),
       ]),
     ]);
   }

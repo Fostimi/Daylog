@@ -106,6 +106,11 @@ export function createProfile() {
     body: {
       birthYear: null,
       heightCm: null,
+      // Poids de reference des calculs. Le suivi du poids au jour le jour
+      // viendra avec le module sante ; celui-ci est le point de depart, et il
+      // porte sa date pour qu'on sache s'il est encore d'actualite.
+      weightKg: null,
+      weightMeasuredAt: null,
       // Base de calcul metabolique, choisie explicitement et modifiable a tout
       // moment. `null` = pas encore choisi, aucun calcul n'est affiche.
       calcBasis: null, // 'a' | 'b' | 'interpolated' | 'lean-mass'
@@ -121,6 +126,9 @@ export function createProfile() {
     },
     goals: {
       weight: null, // 'maintain' | 'lose-slow' | 'lose' | 'gain-slow' | 'gain'
+      // Demande separement de la mobilite, et jamais deduit d'elle : une
+      // personne en fauteuil peut etre sportive de haut niveau.
+      activity: null, // 'sedentary' | 'light' | 'moderate' | 'high' | 'athlete'
       proteinPerKg: null,
       hydrationMl: null,
     },

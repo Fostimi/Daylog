@@ -61,6 +61,11 @@ export async function buildBackup({ modules = null, from = null, to = null } = {
   return {
     format: FORMAT,
     schemaVersion: SCHEMA_VERSION,
+    // La version de l'application qui a produit le fichier. Elle ne sert a
+    // rien au chargement -- c'est `schemaVersion` qui pilote les migrations --
+    // mais elle repond a la premiere question qu'on se pose devant une
+    // sauvegarde qui se comporte mal : elle vient d'ou, celle-la ?
+    appVersion: typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : null,
     exportedAt: new Date().toISOString(),
     partial,
     // Un export partiel n'emporte ni profil ni reglages : on partage des

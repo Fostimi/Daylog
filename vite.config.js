@@ -1,6 +1,14 @@
 import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
+
+// La version vient d'un seul endroit : package.json. Elle est injectee a la
+// construction, donc rien n'est lu a l'execution -- et il n'y a jamais deux
+// numeros a tenir a jour.
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url)));
 
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(version) },
+
   // Chemins relatifs : l'app fonctionne aussi bien a la racine d'un domaine que
   // dans un sous-dossier (GitHub Pages, par exemple), sans reconfiguration.
   base: './',
