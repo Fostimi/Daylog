@@ -700,9 +700,12 @@ export async function render({ store }) {
           ]);
         }),
       ]),
+      // « Ajouter » tout court : l'ecran du jour en compte deja un autre, celui
+      // des seances. Deux boutons du meme nom dans une page ne renseignent
+      // personne qui navigue de bouton en bouton.
       el('div', { class: 'card-actions' }, [
         el('button', { type: 'button', class: 'btn btn-primary', onClick: submit },
-          'Ajouter'
+          'Ajouter le traitement'
         ),
       ]),
       el('p', { class: 'card-hint', style: { marginBottom: '0' } },

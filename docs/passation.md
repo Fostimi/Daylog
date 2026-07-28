@@ -18,18 +18,19 @@ est déployée sur https://fostimi.github.io/Daylog/.
 | ✅ | Alimentation : 130 aliments livrés, aliments et repas à soi, cibles |
 | ✅ | Profil complet : corps, genre, activité, objectif |
 | ✅ | Santé : mesures choisies, douleur, digestion, symptômes, traitements |
+| ✅ | Activité : catalogue trié par mobilité, distance, séances, jour de repos |
 | ✅ | Recalage de l'estimation énergétique sur les pesées et les repas notés |
 | ✅ | Bilan : graphiques, moyennes, phrases de synthèse |
 | ✅ | « Comment ça marche » : ce que l'app calcule et ce qu'elle refuse |
 | ✅ | Sauvegarde, restauration, partage sélectif par module |
-| ⬜ | Activité physique, argent, apprentissage |
+| ⬜ | Argent, apprentissage, productivité |
 | ⬜ | Verrouillage par code, notifications, publication sur les stores |
 
-**Poids** : 17,8 Ko à l'ouverture quotidienne, 23,9 Ko à la première ouverture,
-63 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
+**Poids** : 18,0 Ko à l'ouverture quotidienne, 24,5 Ko à la première ouverture,
+68 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
 télécharge). Les deux premiers sont ceux à surveiller.
 
-**Vérifications** : 224 tests unitaires, 10 fuseaux horaires, 165 vérifications
+**Vérifications** : 247 tests unitaires, 10 fuseaux horaires, 165 vérifications
 navigateur, plus un stress test qui cherche ce qu'on n'avait pas prévu.
 `npm run verify` enchaîne le tout.
 
@@ -69,6 +70,9 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
     couleur d'alerte. Les bornes de saisie disent ce que Daylog sait
     enregistrer, pas ce qu'un corps a le droit d'afficher. Voir
     [sante.md](sante.md).
+11. **Les calories d'une séance n'ouvrent aucun crédit.** Le facteur d'activité
+    du profil les compte déjà ; les ajouter à une cible ferait manger deux fois
+    la même séance. Voir [activite.md](activite.md).
 
 ## Là où il faut faire attention
 
@@ -88,13 +92,10 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 
 ## La suite, dans l'ordre suggéré
 
-1. **Activité physique** — catalogue d'exercices, distances, calories actives.
-   Attention : le niveau d'activité du profil et l'activité notée au jour le
-   jour ne doivent pas se compter deux fois.
-2. **Vue hebdomadaire** — prévue au cahier des charges, absente aujourd'hui.
-3. **Historique navigable** — accéder à n'importe quelle journée par calendrier
+1. **Vue hebdomadaire** — prévue au cahier des charges, absente aujourd'hui.
+2. **Historique navigable** — accéder à n'importe quelle journée par calendrier
    ou recherche. Les flèches jour précédent / suivant existent, pas le reste.
-4. **Polissage** — thèmes de couleur, recalcul dynamique des quantités,
+3. **Polissage** — thèmes de couleur, recalcul dynamique des quantités,
    réévaluation du « i » (est-il compris de tout le monde ?).
 
 ## Questions ouvertes
@@ -118,4 +119,6 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 - [nutrition.md](nutrition.md) — les arbitrages du suivi alimentaire
 - [sante.md](sante.md) — les bornes de saisie, les doses figées, le poids comme
   série
+- [activite.md](activite.md) — pourquoi les calories d'une séance n'ouvrent
+  aucun crédit
 - [deploiement.md](deploiement.md) — mise en ligne

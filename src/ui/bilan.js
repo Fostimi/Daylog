@@ -30,7 +30,9 @@ import * as db from '../core/db.js';
 import { addDays, lastNDays, today, toDate } from '../core/date.js';
 import { meanOf, round } from '../core/summary.js';
 import { buildInsights, RAPPEL_CORRELATION } from '../core/insights.js';
-import { formatDayShort, formatDayMonth, formatDayRange, formatNumber } from '../core/i18n.js';
+import {
+  formatDayShort, formatDayMonth, formatDayRange, formatNumber, formatDuration,
+} from '../core/i18n.js';
 
 /** Profondeur d'historique du bilan de cycle : un cycle ne se lit pas sur 7 jours. */
 const CYCLE_HISTORY_DAYS = 400;
@@ -161,6 +163,45 @@ export function createBilanView({ store, root, go, alert = null }) {
   }
 
   /**
+   * Bilan de l'activite.
+   *
+   * On compte ce qui a eu lieu : des jours ou quelque chose a ete note, jamais
+   * des jours « manques ». La distinction n'est pas cosmetique -- « 12 jours
+   * actifs sur 30 » et « 18 jours sans activité » decrivent les memes chiffres
+   * et ne disent pas la meme chose a qui les lit.
+   *
+   * Aucune calorie active ici : elles se deduisent du poids, que le resume ne
+   * porte pas. Elles restent sur l'ecran du jour, ou le profil est sous la main.
+   */
+  function activityCard(rows) {
+    const bougé = rows.filter((r) => typeof r.moveMin === 'number' || typeof r.moveM === 'number');
+    const repos = rows.filter((r) => r.restDay === 1).length;
+    if (!bougé.length && !repos) return null;
+
+    const minutes = rows.map((r) => r.moveMin).filter((v) => typeof v === 'number');
+    const metres = rows.map((r) => r.moveM).filter((v) => typeof v === 'number');
+    const seances = rows.map((r) => r.workouts).filter((v) => typeof v === 'number');
+
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title' }, 'Bouger'),
+      el('dl', { class: 'facts' }, [
+        fact('Jours notés', String(bougé.length)),
+        seances.length &&
+          fact('Séances', String(seances.reduce((a, b) => a + b, 0))),
+        minutes.length &&
+          fact('Temps total', formatDuration(minutes.reduce((a, b) => a + b, 0))),
+        metres.length &&
+          fact(
+            'Distance',
+            formatNumber(metres.reduce((a, b) => a + b, 0) / 1000, { digits: 1 }),
+            'km'
+          ),
+        repos > 0 && fact('Jours de repos notés', String(repos)),
+      ].filter(Boolean)),
+    ]);
+  }
+
+  /**
    * Courbe de poids.
    *
    * Une echelle calee sur les valeurs relevees, et non sur zero : partir de
@@ -251,6 +292,7 @@ export function createBilanView({ store, root, go, alert = null }) {
 
         cycleBlock,
         healthBlock,
+        activityCard(rows),
 
         ...(() => {
           const phrases = buildInsights(rows);
@@ -313,6 +355,18 @@ export function createBilanView({ store, root, go, alert = null }) {
         ]),
 
         tracked > 0 && weightChart(labels, value('weightKg')),
+
+        tracked > 0 && value('moveM').some((v) => v !== null) && el('div', { class: 'card' }, [
+          barChart({
+            title: 'Distance',
+            labels,
+            // En kilometres : un histogramme en metres affiche des nombres a
+            // cinq chiffres sous chaque barre.
+            values: value('moveM').map((v) => (v === null ? null : Math.round(v / 10) / 100)),
+            label: 'Distance',
+            unit: 'km',
+          }),
+        ]),
 
         el('p', { class: 'footer-note' },
           'Outil de suivi, pas un dispositif médical.'

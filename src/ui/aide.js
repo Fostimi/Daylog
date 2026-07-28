@@ -239,6 +239,37 @@ export function createAideView({ store, root, go, alert = null }) {
             ),
           ]),
 
+        modules.activity &&
+          section('Les calories d’une séance', [
+            p(
+              'Elles ',
+              el('strong', {}, 'ne s’ajoutent à aucune cible'),
+              ', et c’est voulu. Le niveau d’activité de ton profil contient déjà ' +
+                'tes séances : les additionner reviendrait à compter la même dépense ' +
+                'deux fois, et à te proposer de manger davantage pour une séance déjà ' +
+                'prise en compte.'
+            ),
+            p(
+              'Si tu veux que tes séances pèsent vraiment sur ton estimation, c’est ' +
+                'déjà le cas : le recalage sur tes pesées les compte, puisqu’elles se ' +
+                'voient dans ton poids et dans tes repas. Sans rien additionner à la main.'
+            ),
+            p(
+              'Le chiffre affiché est un ordre de grandeur. La même séance vaut du ' +
+                'simple au double selon l’intensité, et il est calculé à partir de ton ' +
+                'poids et de la durée — sans poids connu, aucune calorie n’est estimée.'
+            ),
+            p(
+              'Ta réponse sur la façon dont tu te déplaces change l’',
+              el('strong', {}, 'ordre'),
+              ' du catalogue et le mot employé, jamais ce à quoi tu as accès : tout ' +
+                'reste ouvert à tout le monde. En fauteuil, la distance s’affiche sans ' +
+                'équivalent en poussées — celui-ci dépend du réglage du fauteuil et du ' +
+                'terrain, et le calculer avec la formule de la marche donnerait un ' +
+                'nombre précis et faux.'
+            ),
+          ]),
+
         section('Ce que Daylog n’est pas', [
           p(
             'Un outil de suivi, ',

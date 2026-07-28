@@ -28,6 +28,15 @@ export const THEMES = [
     modules: ['nutrition', 'hydration'],
   },
   {
+    id: 'activity',
+    label: 'Activité physique',
+    // « Bouger » et non « sport » : marcher jusqu'a la boulangerie compte, et
+    // le mot « sport » fait renoncer d'avance une partie des gens a qui ce
+    // suivi servirait le plus.
+    hint: 'Séances, distance, ce que tu as bougé',
+    modules: ['activity'],
+  },
+  {
     id: 'health',
     label: 'Santé',
     // Le libelle enumere volontairement : « Santé » tout court laisse imaginer

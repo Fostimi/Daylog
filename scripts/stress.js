@@ -233,6 +233,7 @@ await page.evaluate(async () => {
     nutrition: true,
     cycle: true,
     health: true,
+    activity: true,
   });
 });
 await page.reload({ waitUntil: 'networkidle' });
@@ -280,7 +281,7 @@ await page.locator('summary:has-text("Ajouter un traitement")').click();
 await page.waitForTimeout(150);
 await page.locator('#health-trt-name').fill('Hydroxychloroquine');
 await page.locator('#health-trt-dose').fill('200');
-await page.locator('.btn-primary:has-text("Ajouter")').click();
+await page.locator('.btn-primary:has-text("Ajouter le traitement")').click();
 await page.waitForTimeout(400);
 await page.locator('input[id^="health-take-"]').first().check();
 await page.waitForTimeout(200);
@@ -348,6 +349,51 @@ const joursApres = await readDays();
 const items = joursApres[0]?.modules?.nutrition?.items || [];
 if (items.some((i) => i.quantity === 0)) found('nutrition', 'une quantite nulle a ete enregistree');
 else ok('une quantite nulle n est pas enregistree');
+
+// ══════════════════════════════════════ 3 ter. activite physique
+
+/*
+ * Ce que cherche cette section : un formulaire qui se referme sous les doigts.
+ *
+ * Les champs proposes dependent de l'activite choisie -- une seance de natation
+ * n'a pas de denivele -- donc choisir une activite redessine la carte. La
+ * premiere version refermait le formulaire et effacait la duree deja tapee,
+ * juste avant de demander les series et les repetitions.
+ */
+await page.locator('summary:has-text("Ajouter une séance")').click();
+await page.waitForTimeout(150);
+await page.locator('#activity-new-min').fill('45');
+await page.selectOption('#activity-new-kind', 'strength');
+await page.waitForTimeout(250);
+
+const dureeGardee = await page.locator('#activity-new-min').inputValue().catch(() => '');
+const champVisible = await page.locator('#activity-new-min').isVisible().catch(() => false);
+if (!champVisible) found('activite', 'changer d activite referme le formulaire en cours de saisie');
+else if (dureeGardee !== '45') found('activite', `la duree deja tapee est perdue : « ${dureeGardee} »`);
+else ok('changer d activite ne referme pas le formulaire ni n efface la saisie');
+
+await page.locator('#activity-new-sets').fill('4');
+await page.locator('#activity-new-reps').fill('10');
+await page.locator('.btn-primary:has-text("Ajouter la séance")').click();
+await page.waitForTimeout(400);
+
+await fill('#activity-move', '4.2');
+await auditScreen('activite avec une seance');
+
+// Une duree impossible ne doit rien enregistrer.
+await page.locator('#activity-new-min').fill('99999');
+await page.locator('.btn-primary:has-text("Ajouter la séance")').click();
+await page.waitForTimeout(300);
+
+await page.waitForTimeout(2400);
+const bouge = (await readDays())[0]?.modules?.activity || {};
+if ((bouge.sessions || []).length !== 1) {
+  found('activite', `${(bouge.sessions || []).length} seance(s) enregistree(s) au lieu d une`);
+} else if (bouge.meters !== 4200) {
+  found('activite', `distance enregistree : ${bouge.meters} au lieu de 4200 m`);
+} else {
+  ok('une seance impossible n est pas enregistree, la distance l est');
+}
 
 // ══════════════════════════════════════════════ 4. survie au rechargement
 

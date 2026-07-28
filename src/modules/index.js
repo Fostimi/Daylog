@@ -94,6 +94,37 @@ export function registerCoreModules() {
     },
   });
 
+  // ------------------------------------------------------ activite physique
+  // Le resume ne publie QUE des faits mesures : duree, distance, nombre de
+  // seances. Pas de calories actives -- elles se deduisent du poids, que le
+  // module ne connait pas (il vit dans le profil, pas dans la journee), et un
+  // module n'a pas a publier un chiffre qu'il ne peut pas calculer honnetement.
+  // L'ecran, lui, a le profil sous la main et les affiche.
+  registerModule({
+    id: 'activity',
+    label: 'Activité physique',
+    icon: 'activity',
+    defaultEnabled: false,
+    order: 35,
+    view: () => import('./views/activity.js'),
+    summarize(data) {
+      const sessions = data?.sessions || [];
+      const minutes = sessions.map((s) => s?.minutes).filter((v) => typeof v === 'number');
+      const legs = sessions.map((s) => s?.meters).filter((v) => typeof v === 'number');
+      const own = typeof data?.meters === 'number' ? data.meters : null;
+      const distance =
+        own === null && !legs.length ? null : (own || 0) + legs.reduce((a, b) => a + b, 0);
+      return {
+        moveM: distance === null ? null : Math.round(distance),
+        moveMin: minutes.length ? minutes.reduce((a, b) => a + b, 0) : null,
+        workouts: sessions.length || null,
+        // Un jour de repos est une reponse a part entiere, comme « zero verre
+        // d'eau » : il se distingue d'une journee ou l'on n'a rien note.
+        restDay: data?.restDay === true ? 1 : null,
+      };
+    },
+  });
+
   // ----------------------------------------------------------- hydratation
   registerModule({
     id: 'hydration',
