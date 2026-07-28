@@ -28,12 +28,14 @@ est déployée sur https://fostimi.github.io/Daylog/.
 | ⬜ | Apprentissage, productivité |
 | ⬜ | Verrouillage par code, notifications, publication sur les stores |
 
-**Poids** : 18,5 Ko à l'ouverture quotidienne, 25,0 Ko à la première ouverture,
-76 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
-télécharge). Les deux premiers sont ceux à surveiller.
+**Poids** : 19,1 Ko à l'ouverture quotidienne, 25,8 Ko à la première ouverture,
+78 Ko cumulés. Le budget est fixé à **5 Mo** : ce qui reste vérifié n'est plus
+un plafond mais un détecteur d'accident (une dépendance entraînée par mégarde,
+la base d'aliments dupliquée dans le noyau, un module qui cesse d'être
+découpé). Ne plus relever ces chiffres à chaque livraison.
 
-**Vérifications** : 279 tests unitaires, 10 fuseaux horaires, 165 vérifications
-navigateur, plus un stress test qui cherche ce qu'on n'avait pas prévu.
+**Vérifications** : 289 tests unitaires, 10 fuseaux horaires, 165 vérifications
+navigateur (168), plus un stress test qui cherche ce qu'on n'avait pas prévu.
 `npm run verify` enchaîne le tout.
 
 **Rappel d'environnement** : `npm install` puis, si Playwright ne trouve pas son
@@ -81,6 +83,13 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 13. **Un virement n'est ni une dépense ni un revenu.** Il bouge la balance et
     reste hors des deux totaux, sans quoi les catégories ne veulent plus rien
     dire. Voir [argent.md](argent.md).
+14. **Rien n'est interdit de partage.** C'est la personne qui choisit ce qu'elle
+    montre, section par section — journal et humeur compris. Ce qui protège,
+    c'est qu'aucun extrait ne parte sans un geste explicite, pas une
+    interdiction posée d'avance. La santé se découpe en trois parts.
+15. **Les calories d'une séance ne s'affichent qu'une fois**, dans un compteur.
+    Répétées ligne par ligne, elles donnent à un ordre de grandeur l'allure
+    d'une mesure. Une mesure de montre prime toujours sur l'estimation.
 
 ## Là où il faut faire attention
 
@@ -110,11 +119,23 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 
 ## Questions ouvertes
 
+- **La table calorique par profil de référence.** Demandée, pas construite : il
+  faut d'abord trancher *quelle variable* l'alimente. Le calcul actuel
+  (`(MET − 1) × poids × heures`) tient déjà compte de la masse déplacée. Ajouter
+  une différence de composition corporelle est légitime, mais elle doit passer
+  par `body.calcBasis` — la variable physiologique déjà choisie explicitement,
+  qui gère non-binaire et transition — et non par `identity.gender`. Sinon la
+  décision n°6 tombe. À valider avant de bâtir la table.
+- **Les traitements au check-in.** Demandé : pouvoir valider une prise
+  matin/midi/soir directement depuis le check-in, avec un horodatage juste (ou
+  un champ « pris à telle heure ») pour que le suivi partagé reste exact. Pas
+  encore fait.
 - **L'invitation à consulter un professionnel de santé** est aujourd'hui une
   phrase permanente dans « Comment ça marche », jamais déclenchée par un seuil.
   À rouvrir aux essais, avec l'avis des personnes concernées.
-- **Le « i »** est-il une affordance comprise ? Si non, tout bascule vers la
-  documentation intégrée.
+- **Le « i » était invisible**, et c'est corrigé : il n'en existait aucun sur une
+  installation neuve, tous étant conditionnés à des données accumulées. Reste à
+  savoir si, maintenant qu'il est là dès le premier jour, il est compris.
 - **Le modèle économique** (achat unique, publicités légères) n'est pas commencé
   et n'a aucune trace dans le code. Volontaire.
 
