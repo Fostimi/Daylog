@@ -17,7 +17,7 @@
 
 import { el, mount, announce } from './dom.js';
 import { topbar } from './menu.js';
-import { choice, numberField } from './controls.js';
+import { choice, numberField, info } from './controls.js';
 import {
   WEARABLES, MOBILITY, CYCLE, GENDERS,
   sanitizeDeclared, DECLARED_CYCLE_RANGE, DECLARED_PERIOD_RANGE,
@@ -36,6 +36,7 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
   // Les journees recentes, lues une fois : elles servent a montrer comment la
   // personne repartit REELLEMENT ses repas, plutot qu'un modele theorique.
   let recentDays = [];
+  let calibrationRows = [];
 
   function setStatus(message) {
     status = message;
@@ -392,6 +393,7 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
       body,
       activity: goals.activity,
       goal: goals.hasGoal === true ? goals.weight : null,
+      rows: calibrationRows,
     });
 
     const NOMS = {
@@ -434,13 +436,84 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
             'serait plus un objectif.'
         ),
 
+      needs.maintenance && calibrationNote(needs.calibration),
+
       needs.maintenance && splitBlock(showTarget ? needs.target : needs.maintenance),
 
-      needs.maintenance &&
+      needs.maintenance && !needs.calibration?.applied &&
         el('p', { class: 'card-hint', style: { marginBottom: '0' } },
           'Une estimation à ± 10 %, qui se corrigera sur tes mesures réelles.'
         ),
     ]);
+  }
+
+  /**
+   * Ce que le recalage a fait, ou ce qui lui manque.
+   *
+   * Un chiffre qui change tout seul sans que rien ne l'explique ressemble a un
+   * bug -- surtout celui-la, qui pilote la cible calorique. La carte dit donc
+   * toujours d'ou vient l'estimation affichee : de la formule, ou des faits.
+   *
+   * Elle ne se plaint jamais de ce qui manque a quelqu'un qui ne se pese pas :
+   * ne pas suivre son poids est un choix, pas un retard.
+   */
+  function calibrationNote(calibration) {
+    if (!calibration) return null;
+
+    if (calibration.applied) {
+      const detail = info({
+        id: 'profile-calibration-info',
+        label: 'Comment ce chiffre a été recalé',
+        text: [
+          `Sur ${calibration.days} jours : ${calibration.weighings} pesées et ` +
+            `${calibration.intakeDays} journées de repas notés, soit ` +
+            `${formatNumber(calibration.meanIntake)} kcal par jour en moyenne. `,
+          `Ton poids a évolué de ${calibration.kgPerWeek > 0 ? '+' : ''}` +
+            `${formatNumber(calibration.kgPerWeek, { digits: 2 })} kg par semaine sur la ` +
+            'période. Un kilo de masse corporelle vaut environ 7 700 kcal : ' +
+            'l’écart entre ce que tu as mangé et ce que ton poids a fait donne ta ' +
+            'dépense réelle. ',
+          `La formule seule disait ${formatNumber(calibration.formula)} kcal. `,
+          'Un journal alimentaire est presque toujours sous-déclaré : ce chiffre ' +
+            'reste une estimation, simplement bâtie sur tes faits plutôt que sur ' +
+            'une moyenne de population.',
+        ],
+      });
+
+      return el('div', { class: 'health-trend' }, [
+        el('div', { class: 'health-trend-head' }, [
+          el('p', { class: 'health-trend-main' },
+            `Recalé sur tes ${calibration.weighings} pesées.`
+          ),
+          detail.button,
+        ]),
+        detail.panel,
+      ]);
+    }
+
+    if (calibration.reason === 'implausible') {
+      return el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        `Tes pesées et tes repas notés donneraient ${formatNumber(calibration.value)} kcal, ` +
+          `soit ${calibration.deviation} % d’écart avec la formule. C’est trop pour ` +
+          'qu’elle seule soit en cause : il manque probablement des repas dans ton ' +
+          'journal. L’estimation reste celle de la formule.'
+      );
+    }
+
+    // Il manque quelque chose. On le dit une fois, sans y revenir : la phrase
+    // decrit ce qui debloquerait le recalage, elle ne reclame rien.
+    const manque = {
+      weighings: `Le recalage sur tes pesées demande ${calibration.need} pesées ` +
+        `(tu en as ${calibration.have}).`,
+      span: `Le recalage sur tes pesées demande ${calibration.need} jours entre ta ` +
+        `première et ta dernière pesée (tu en as ${calibration.have}).`,
+      intake: `Le recalage demande ${calibration.need} journées de repas notés sur la ` +
+        `période de tes pesées (tu en as ${calibration.have}).`,
+    }[calibration.reason];
+
+    return manque
+      ? el('p', { class: 'card-hint', style: { marginBottom: '0' } }, manque)
+      : null;
   }
 
   /** Repartition sur la journee, repliee : elle repond a une question, elle ne s'impose pas. */
@@ -476,11 +549,19 @@ export function createProfileView({ store, root, go, onReset, alert = null }) {
    * repartition courante, qui est de toute facon le cas le plus frequent.
    */
   async function loadRecentDays() {
+    const end = today(store.getSettings().dayStartHour || 0);
     try {
-      const end = today(store.getSettings().dayStartHour || 0);
       recentDays = await db.getDays(addDays(end, -60), end);
     } catch {
       recentDays = [];
+    }
+    try {
+      // Les resumes, et non les fiches completes : le recalage a besoin de
+      // quatre mois pour avoir une chance d'exister, ce qui ferait beaucoup de
+      // fiches a relire pour deux nombres par jour.
+      calibrationRows = await db.getSummaries(addDays(end, -120), end);
+    } catch {
+      calibrationRows = [];
     }
   }
 

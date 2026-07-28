@@ -416,7 +416,7 @@ await page.evaluate(async () => {
     const r = indexedDB.open('daylog');
     r.onsuccess = () => resolve(r.result);
   });
-  const t = db.transaction(['days', 'summaries'], 'readwrite');
+  const t = db.transaction(['days', 'summaries', 'meta'], 'readwrite');
   const today = new Date();
   for (let i = 1; i < 365; i++) {
     const d = new Date(today);
@@ -431,17 +431,27 @@ await page.evaluate(async () => {
       schemaVersion: 1,
       modules: {
         mood: { checkins: { morning: { mood: 7, energy: 6, stress: 4, loggedAt: '2026-01-01' } } },
-        nutrition: { items: [{ id: `x${i}`, slot: 'lunch', label: 'Test', quantity: 100, unit: 'g', kcal: 500, protein: 20 }] },
+        nutrition: { items: [{ id: `x${i}`, slot: 'lunch', label: 'Test', quantity: 100, unit: 'g', kcal: 2600, protein: 20 }] },
         ...(flow ? { cycle: { flow } } : {}),
         ...(weight ? { health: { weight, bpmRest: 54 } } : {}),
       },
     });
     t.objectStore('summaries').put({
-      date, mood: 7, energy: 6, stress: 4, kcal: 500, protein: 20,
+      date, mood: 7, energy: 6, stress: 4, kcal: 2600, protein: 20,
       ...(flow ? { flow } : {}),
       ...(weight ? { weightKg: weight, bpmRest: 54 } : {}),
     });
   }
+  // Un profil complet : sans lui, aucun besoin energetique n'est calculable, et
+  // le recalage sur les faits ne serait jamais traverse.
+  t.objectStore('meta').put({
+    key: 'profile',
+    value: {
+      identity: { name: null, address: 'neutral', gender: 'man' },
+      body: { birthYear: new Date().getFullYear() - 30, heightCm: 175, weightKg: 72, calcBasis: 'a' },
+      goals: { hasGoal: true, weight: 'lose-slow', activity: 'moderate' },
+    },
+  });
   await new Promise((resolve) => { t.oncomplete = resolve; });
 });
 
@@ -456,6 +466,83 @@ await auditScreen('bilan avec un an de donnees');
 await navigate("Aujourd'hui");
 await page.waitForSelector('[data-slot]');
 await auditScreen('journee avec un an de donnees');
+
+// ══════════════════════════════════════════ 8 bis. recalage sur les faits
+
+/*
+ * Le profil vient d'etre ecrit directement dans la base : il faut recharger
+ * pour que l'application le lise.
+ *
+ * Ce que cherche cette section : un recalage qui produirait un chiffre absurde,
+ * ou qui changerait la cible sans que rien ne l'explique a l'ecran. Une cible
+ * calorique qui bouge toute seule ressemble a un bug, et c'est le genre de
+ * chiffre qu'on ne peut pas se permettre de laisser deriver en silence.
+ */
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForSelector('[data-slot]');
+await navigate('Profil');
+await page.waitForSelector('.card');
+await page.waitForTimeout(400);
+
+const fenetre = await page.evaluate(async () => {
+  const db = await new Promise((resolve) => {
+    const r = indexedDB.open('daylog');
+    r.onsuccess = () => resolve(r.result);
+  });
+  const rows = await new Promise((resolve) => {
+    const q = db.transaction(['summaries'], 'readonly').objectStore('summaries').getAll();
+    q.onsuccess = () => resolve(q.result);
+  });
+  const recents = rows.slice(-120);
+  return {
+    total: rows.length,
+    pesees: recents.filter((r) => typeof r.weightKg === 'number').length,
+    repas: recents.filter((r) => typeof r.kcal === 'number').length,
+  };
+});
+
+const besoins = await page.evaluate(() => {
+  const lire = (nom) => {
+    for (const f of document.querySelectorAll('.fact')) {
+      if (f.querySelector('dt')?.textContent.trim() === nom) {
+        return Number(f.querySelector('dd')?.textContent.replace(/[^\d]/g, '')) || null;
+      }
+    }
+    return null;
+  };
+  return {
+    repos: lire('Au repos'),
+    depense: lire('Dépense estimée'),
+    cible: lire('Cible'),
+    note: document.querySelector('.health-trend-main')?.textContent || null,
+    // Ce que l'ecran dit quand il ne recale pas : c'est la seule chose qui
+    // permette de savoir POURQUOI sans rouvrir le navigateur a la main.
+    manque: [...document.querySelectorAll('.card-hint')]
+      .map((h) => h.textContent)
+      .find((t) => /recalage|pesées|journal/i.test(t)) || null,
+    texte: document.body.innerText,
+  };
+});
+
+if (!besoins.note || !besoins.note.includes('Recalé')) {
+  found(
+    'recalage',
+    `aucune mention du recalage : note=${JSON.stringify(besoins.note)} ` +
+      `repos=${besoins.repos} depense=${besoins.depense} cible=${besoins.cible} ` +
+      `manque=${JSON.stringify(besoins.manque)} fenetre=${JSON.stringify(fenetre)}`
+  );
+} else if (!besoins.depense || besoins.depense < 1200 || besoins.depense > 5000) {
+  found('recalage', `depense recalee invraisemblable : ${besoins.depense} kcal`);
+} else if (besoins.cible && besoins.cible < besoins.repos) {
+  found('recalage', `cible ${besoins.cible} sous le metabolisme de base ${besoins.repos}`);
+} else {
+  ok(`le recalage sur les faits tient : ${besoins.depense} kcal, cible ${besoins.cible}`);
+}
+
+if (/NaN|undefined|Infinity|\[object/.test(besoins.texte)) {
+  found('recalage', `valeur technique affichee : ${besoins.texte.match(/NaN|undefined|Infinity|\[object \w+/)?.[0]}`);
+}
+await auditScreen('profil avec un recalage actif');
 
 // ══════════════════════════════════════════════ 9. erreurs JavaScript
 

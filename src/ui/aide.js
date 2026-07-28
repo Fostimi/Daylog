@@ -166,9 +166,19 @@ export function createAideView({ store, root, go, alert = null }) {
               'jamais sous le premier, quel que soit l’objectif choisi.'
           ),
           p(
-            'Compte ± 10 % d’erreur au départ, pour tout le monde. Si ton poids ' +
-              'évolue autrement que prévu sur six semaines, c’est l’estimation qui a ' +
-              'tort : elle se recale sur ce qui a été observé.'
+            'Compte ± 10 % d’erreur au départ, pour tout le monde. Puis, au bout de ' +
+              'six semaines de pesées et de repas notés, ',
+            el('strong', {}, 'ce sont tes faits qui décident'),
+            ' : la différence entre ce que tu as mangé et ce que ton poids a fait ' +
+              'donne ta dépense réelle, et c’est elle qui remplace la formule. Le ' +
+              'point de départ ne pèse alors presque plus.'
+          ),
+          p(
+            'Le recalage a besoin des deux : sans tes repas notés, perdre du poids ' +
+              'parce que tu l’as voulu serait pris pour une erreur de la formule, et ' +
+              'ta cible baisserait à chaque fois un peu plus. Et si l’écart dépasse ' +
+              '40 %, Daylog ne recale pas — à ce niveau-là ce n’est plus la formule ' +
+              'qui se trompe, c’est qu’il manque des repas dans le journal.'
           ),
           p(
             'Les aliments livrés portent des valeurs ',

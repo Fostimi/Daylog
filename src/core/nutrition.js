@@ -211,6 +211,10 @@ export function energyNeeds({
   activity = null,
   goal = null,
   at = new Date(),
+  // Resumes quotidiens, pour recaler l'estimation sur les faits. Absents,
+  // l'estimation reste celle de la formule -- c'est le cas de quelqu'un qui ne
+  // se pese pas, et ce n'est pas un defaut.
+  rows = null,
 }) {
   const basal = basalRate({ weightKg, heightCm, ageYears, body, at });
   if (basal.value === null) return { maintenance: null, target: null, ...basal };
@@ -220,7 +224,38 @@ export function energyNeeds({
     return { basal: Math.round(basal.value), maintenance: null, target: null, missing: ['activity'] };
   }
 
-  const maintenance = basal.value * factor;
+  const formula = basal.value * factor;
+  let maintenance = formula;
+
+  /*
+   * Le recalage.
+   *
+   * Ce qui rend le choix de la base de calcul beaucoup moins critique qu'il
+   * n'y parait : au bout de six semaines de pesees et de repas notes, ce sont
+   * les faits qui decident, et le point de depart ne pese presque plus.
+   *
+   * Un garde-fou tout de meme : au-dela de 40 % d'ecart avec la formule, on ne
+   * recale pas. A ce niveau-la ce n'est plus la formule qui se trompe, c'est le
+   * journal alimentaire qui est incomplet -- et adopter le chiffre reviendrait
+   * a proposer une cible batie sur des repas qui n'ont pas ete notes.
+   */
+  let calibration = rows ? observedExpenditure(rows) : null;
+  if (calibration?.value) {
+    const deviation = Math.abs(calibration.value - formula) / formula;
+    if (deviation <= CALIBRATION.maxDeviation) {
+      maintenance = calibration.value;
+      calibration = { ...calibration, applied: true, formula: Math.round(formula) };
+    } else {
+      calibration = {
+        ...calibration,
+        applied: false,
+        reason: 'implausible',
+        formula: Math.round(formula),
+        deviation: Math.round(deviation * 100),
+      };
+    }
+  }
+
   const delta = goalDelta(goal) ?? 0;
 
   // Le garde-fou : quelle que soit la vitesse choisie, la cible ne descend
@@ -237,6 +272,7 @@ export function energyNeeds({
     basis: basal.basis,
     floored,
     delta,
+    calibration,
   };
 }
 
@@ -364,27 +400,188 @@ export function splitTarget(kcal, split) {
  *
  * Le mecanisme le plus important du module, et celui qui rend le choix de la
  * base de calcul beaucoup moins critique qu'il n'y parait : si le poids evolue
- * autrement que la formule ne le prevoyait, c'est la formule qui a tort.
+ * autrement que les apports ne le laissaient prevoir, c'est l'estimation qui a
+ * tort, pas le corps.
  *
- *   ecart observe = variation de poids reelle x 7700 kcal/kg / nombre de jours
+ *   apports - depense reelle = variation de poids x 7700 kcal/kg / jours
+ *   donc     depense reelle  = apports - (variation x 7700 / jours)
+ *
+ * LE PREMIER PARAMETRE EST CE QUI A ETE MANGE, pas ce que la formule avait
+ * predit. La nuance decide de tout : quelqu'un qui mange volontairement 500 kcal
+ * sous son entretien et maigrit comme prevu confirme son estimation, il ne la
+ * contredit pas. Comparer sa perte a une variation nulle conclurait qu'il
+ * depense 500 kcal de moins qu'en realite, et la cible s'effondrerait un peu
+ * plus a chaque recalage.
  *
  * Exige une periode assez longue (42 jours par defaut) : sur deux semaines, la
  * variation de poids est surtout de l'eau, et recaler la-dessus produirait une
  * estimation qui saute dans tous les sens.
  */
-export function calibrate({ estimate, weightChangeKg, days, minDays = 42 }) {
-  const initial = num(estimate);
+export function calibrate({ intake, weightChangeKg, days, minDays = 42 }) {
+  const eaten = num(intake);
   const change = num(weightChangeKg);
   const span = num(days);
-  if (initial === null || change === null || span === null || span < minDays) {
-    return { value: initial, calibrated: false, missingDays: span === null ? null : minDays - span };
+  if (eaten === null || change === null || span === null || span < minDays) {
+    return { value: eaten, calibrated: false, missingDays: span === null ? null : minDays - span };
   }
 
   const gap = (change * KCAL_PER_KG) / span;
   return {
-    value: Math.round(initial - gap),
+    value: Math.round(eaten - gap),
     calibrated: true,
     gap: Math.round(gap),
     days: span,
+  };
+}
+
+/**
+ * Seuils du recalage.
+ *
+ * Ils sont volontairement eleves. Un recalage qui se declenche trop tot est
+ * pire que pas de recalage du tout : il remplace une estimation connue pour
+ * etre approximative a +-10 % par un chiffre faux qui, lui, a l'air d'avoir ete
+ * mesure.
+ */
+export const CALIBRATION = {
+  minDays: 42,       // moins de six semaines : on mesure surtout de l'eau
+  minWeighings: 8,   // une droite sur trois points ne decrit rien
+  minIntakeDays: 21, // la moyenne des apports doit reposer sur quelque chose
+  // Au-dela de 40 % d'ecart avec la formule, ce n'est plus elle qui se trompe.
+  // Mifflin-St Jeor tourne autour de +-15 % : un ecart de moitie signale un
+  // journal alimentaire incomplet, une balance changee ou une periode de
+  // maladie. On garde alors la formule, et on le dit.
+  maxDeviation: 0.4,
+};
+
+/**
+ * Moyenne des apports, debarrassee de ses extremes.
+ *
+ * Une moyenne ordinaire n'a pas resiste au premier essai : une seule journee
+ * saisie a 99 999 g d'huile -- 900 000 kcal -- portait la moyenne de 2 600 a
+ * 10 000 kcal par jour, et la depense « recalee » a 10 119 kcal. Le chiffre
+ * aurait ensuite pilote la cible calorique pendant des mois.
+ *
+ * Ce n'est pas un cas de laboratoire : taper 999 au lieu de 99 arrive, et il
+ * n'existe aucune raison de refuser la saisie -- personne ne sait ce que
+ * quelqu'un a le droit de manger. Mais une valeur aberrante ne doit pas
+ * decider de ce qu'on lui proposera de manger demain.
+ *
+ * On ecarte donc un dixieme de chaque cote avant de moyenner. Sur trois
+ * semaines minimum, cela retire deux journees par bout : assez pour absorber
+ * une faute de frappe et un reveillon, trop peu pour deformer une habitude.
+ */
+export function trimmedMean(values, share = 0.1) {
+  const sorted = (values || []).filter((v) => num(v) !== null).sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  const cut = Math.floor(sorted.length * share);
+  // Sur un tout petit echantillon, retirer les deux bouts ne laisserait rien.
+  const kept = sorted.length - 2 * cut > 0 ? sorted.slice(cut, sorted.length - cut) : sorted;
+  return kept.reduce((a, b) => a + b, 0) / kept.length;
+}
+
+/**
+ * Pente du poids : la mediane des pentes de toutes les paires de pesees.
+ *
+ * C'est l'estimateur de Theil-Sen, et non les moindres carres. La difference
+ * tient a un seul cas, mais il arrive : une pesee de 724 kg au lieu de 72,4.
+ * Les bornes de saisie ne peuvent pas l'attraper -- 724 est un poids humain
+ * possible, et personne ne veut d'une application qui refuse de noter le sien.
+ *
+ * Une droite des moindres carres se laisse emporter par ce seul point : la
+ * pente devient absurde, et avec elle la depense « reelle » qui pilote la cible
+ * calorique. La mediane des pentes, elle, ne bouge pas tant que la majorite des
+ * paires est saine.
+ *
+ * Cout : autant de paires que de pesees au carre. Sur les quatre mois lus par
+ * les ecrans, c'est au plus une centaine de pesees, donc quelques milliers de
+ * paires -- rien du tout.
+ */
+export function weightSlope(rows = []) {
+  const points = (rows || [])
+    .filter((r) => r?.date && num(r.weightKg) !== null)
+    .map((r) => ({ date: r.date, kg: r.weightKg }))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  if (points.length < 2) return { kgPerDay: null, n: points.length, days: 0 };
+
+  const origin = new Date(points[0].date);
+  const xs = points.map((p) => (new Date(p.date) - origin) / 86400000);
+
+  const slopes = [];
+  for (let i = 0; i < points.length; i++) {
+    for (let j = i + 1; j < points.length; j++) {
+      const dx = xs[j] - xs[i];
+      // Deux pesees le meme jour ne disent rien d'une evolution.
+      if (dx > 0) slopes.push((points[j].kg - points[i].kg) / dx);
+    }
+  }
+  if (!slopes.length) return { kgPerDay: null, n: points.length, days: 0 };
+
+  slopes.sort((a, b) => a - b);
+  const mid = slopes.length >> 1;
+  const kgPerDay =
+    slopes.length % 2 ? slopes[mid] : (slopes[mid - 1] + slopes[mid]) / 2;
+
+  return {
+    kgPerDay,
+    n: points.length,
+    days: xs[xs.length - 1],
+    from: points[0].date,
+    to: points[points.length - 1].date,
+  };
+}
+
+/**
+ * Depense reelle, deduite des pesees et des repas notes.
+ *
+ * Renvoie `{ value: null, reason }` tant qu'il manque de quoi conclure, en
+ * disant CE QUI manque : l'ecran peut alors annoncer ce qu'il reste a faire
+ * plutot que de garder le silence sans expliquer pourquoi.
+ *
+ * Limite a enoncer et jamais a corriger en douce : un journal alimentaire est
+ * sous-declare, souvent de 10 a 30 %. La depense calculee ici herite donc de ce
+ * biais. Elle reste plus proche de la verite que la formule seule, parce que la
+ * variation de poids, elle, ne ment pas -- mais elle n'est pas une mesure.
+ */
+export function observedExpenditure(rows = [], options = {}) {
+  const { minDays, minWeighings, minIntakeDays } = { ...CALIBRATION, ...options };
+
+  const slope = weightSlope(rows);
+  if (slope.kgPerDay === null || slope.n < minWeighings) {
+    return { value: null, reason: 'weighings', have: slope.n, need: minWeighings };
+  }
+  if (slope.days < minDays) {
+    return { value: null, reason: 'span', have: slope.days, need: minDays };
+  }
+
+  // Les apports ne comptent que sur la periode reellement couverte par les
+  // pesees : une moyenne prise en dehors decrirait une autre periode que celle
+  // sur laquelle le poids a bouge.
+  const intakes = (rows || [])
+    .filter((r) => r?.date >= slope.from && r.date <= slope.to && num(r.kcal) !== null)
+    .map((r) => r.kcal);
+
+  if (intakes.length < minIntakeDays) {
+    return { value: null, reason: 'intake', have: intakes.length, need: minIntakeDays };
+  }
+
+  const meanIntake = trimmedMean(intakes);
+  const out = calibrate({
+    intake: meanIntake,
+    weightChangeKg: slope.kgPerDay * slope.days,
+    days: slope.days,
+    minDays,
+  });
+
+  return {
+    value: out.value,
+    gap: out.gap,
+    days: slope.days,
+    weighings: slope.n,
+    intakeDays: intakes.length,
+    meanIntake: Math.round(meanIntake),
+    kgPerWeek: Math.round(slope.kgPerDay * 7 * 100) / 100,
+    from: slope.from,
+    to: slope.to,
   };
 }

@@ -25,6 +25,7 @@
 import { el, mount } from '../../ui/dom.js';
 import { numberField } from '../../ui/controls.js';
 import * as db from '../../core/db.js';
+import { addDays } from '../../core/date.js';
 import { createListItem, activeItems } from '../../core/ids.js';
 import { formatNumber } from '../../core/i18n.js';
 import {
@@ -69,6 +70,16 @@ export async function render({ store }) {
   } catch {
     personalFoods = [];
     meals = [];
+  }
+
+  // Les resumes des mois passes, pour que la cible du jour repose sur la
+  // depense recalee et non sur la seule formule. Un echec de lecture n'empeche
+  // pas la saisie : on retombe alors sur l'estimation theorique.
+  let calibrationRows = [];
+  try {
+    calibrationRows = await db.getSummaries(addDays(store.getDate(), -120), store.getDate());
+  } catch {
+    calibrationRows = [];
   }
 
   // Etat de l'ecran, volontairement local : rien de tout cela n'est une donnee
@@ -225,6 +236,7 @@ export async function render({ store }) {
       // plus : c'est deja un suivi complet, et le seul qui convienne a qui ne
       // veut pas de cible.
       goal: goals.hasGoal === true ? goals.weight : null,
+      rows: calibrationRows,
     });
     if (!needs.target) return null;
     return {

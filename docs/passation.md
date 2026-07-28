@@ -18,19 +18,24 @@ est déployée sur https://fostimi.github.io/Daylog/.
 | ✅ | Alimentation : 130 aliments livrés, aliments et repas à soi, cibles |
 | ✅ | Profil complet : corps, genre, activité, objectif |
 | ✅ | Santé : mesures choisies, douleur, digestion, symptômes, traitements |
+| ✅ | Recalage de l'estimation énergétique sur les pesées et les repas notés |
 | ✅ | Bilan : graphiques, moyennes, phrases de synthèse |
 | ✅ | « Comment ça marche » : ce que l'app calcule et ce qu'elle refuse |
 | ✅ | Sauvegarde, restauration, partage sélectif par module |
 | ⬜ | Activité physique, argent, apprentissage |
 | ⬜ | Verrouillage par code, notifications, publication sur les stores |
 
-**Poids** : 17,8 Ko à l'ouverture quotidienne, 23,5 Ko à la première ouverture,
-61 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
+**Poids** : 17,8 Ko à l'ouverture quotidienne, 23,9 Ko à la première ouverture,
+63 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
 télécharge). Les deux premiers sont ceux à surveiller.
 
-**Vérifications** : 210 tests unitaires, 10 fuseaux horaires, 165 vérifications
+**Vérifications** : 224 tests unitaires, 10 fuseaux horaires, 165 vérifications
 navigateur, plus un stress test qui cherche ce qu'on n'avait pas prévu.
 `npm run verify` enchaîne le tout.
+
+**Rappel d'environnement** : `npm install` puis, si Playwright ne trouve pas son
+navigateur, `CHROME_PATH=/opt/pw-browsers/chromium-*/chrome-linux/chrome`. Les
+deux scripts navigateur lisent cette variable.
 
 ## Les décisions à ne pas défaire
 
@@ -55,6 +60,15 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
    manqué en rouge, pas d'alerte rouge sur un retard de cycle.
 8. **Les écrans restent factuels.** Ce qui doit être expliqué va derrière un
    « i » ou dans « Comment ça marche ». Un texte répété cesse d'être lu.
+9. **Le recalage énergétique part de ce qui a été mangé**, jamais de
+   l'estimation de la formule. Comparer la variation de poids à zéro conclurait
+   qu'un déficit volontaire prouve une dépense plus basse, et la cible
+   descendrait à chaque recalage. Voir
+   [calculs-metaboliques.md](calculs-metaboliques.md).
+10. **Aucun chiffre de santé n'est qualifié.** Ni « normal », ni « élevé », ni
+    couleur d'alerte. Les bornes de saisie disent ce que Daylog sait
+    enregistrer, pas ce qu'un corps a le droit d'afficher. Voir
+    [sante.md](sante.md).
 
 ## Là où il faut faire attention
 
@@ -74,17 +88,13 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 
 ## La suite, dans l'ordre suggéré
 
-1. **Recalage énergétique sur les faits** — `calibrate()` existe dans
-   `core/nutrition.js` et n'est branché nulle part. La santé fournit désormais
-   ce qui lui manquait : une série de poids. C'est la suite immédiate, et la
-   moins chère.
-2. **Activité physique** — catalogue d'exercices, distances, calories actives.
+1. **Activité physique** — catalogue d'exercices, distances, calories actives.
    Attention : le niveau d'activité du profil et l'activité notée au jour le
    jour ne doivent pas se compter deux fois.
-3. **Vue hebdomadaire** — prévue au cahier des charges, absente aujourd'hui.
-4. **Historique navigable** — accéder à n'importe quelle journée par calendrier
+2. **Vue hebdomadaire** — prévue au cahier des charges, absente aujourd'hui.
+3. **Historique navigable** — accéder à n'importe quelle journée par calendrier
    ou recherche. Les flèches jour précédent / suivant existent, pas le reste.
-5. **Polissage** — thèmes de couleur, recalcul dynamique des quantités,
+4. **Polissage** — thèmes de couleur, recalcul dynamique des quantités,
    réévaluation du « i » (est-il compris de tout le monde ?).
 
 ## Questions ouvertes

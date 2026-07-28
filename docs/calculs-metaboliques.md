@@ -147,14 +147,83 @@ par semaine. Un test vérifie l'absence de ce vocabulaire.
 C'est le mécanisme le plus important de ce document, et celui qui rend le choix
 de départ beaucoup moins critique qu'il n'y paraît.
 
-Si, sur six à huit semaines, le poids évolue dans un sens que la formule ne
-prédit pas, **c'est la formule qui a tort**. Daylog ajuste alors son estimation
-sur les faits observés :
+Si, sur six à huit semaines, le poids n'évolue pas comme les apports le
+laissaient prévoir, **c'est l'estimation qui a tort**, pas le corps. La relation
+exacte est un bilan d'énergie :
 
 ```
-écart observé = variation de poids réelle × 7700 kcal/kg ÷ nombre de jours
-estimation ajustée = estimation initiale − écart observé
+apports − dépense réelle = variation de poids × 7700 kcal/kg ÷ jours
+
+donc  dépense réelle = moyenne des apports notés
+                       − (variation de poids × 7700 kcal/kg ÷ jours)
 ```
+
+### Le premier terme est ce qui a été mangé
+
+Et c'est tout l'enjeu. Une version antérieure de ce document écrivait
+`estimation ajustée = estimation initiale − écart observé`, en comparant
+implicitement la variation de poids à zéro. C'est faux dès que la personne suit
+un objectif.
+
+Quelqu'un qui vise volontairement 500 kcal sous son entretien et perd le poids
+attendu **confirme** son estimation. La formule fautive en concluait qu'il
+dépense 500 kcal de moins qu'en réalité — et la cible, recalculée à partir de
+cette dépense, descendait encore de 500 kcal. À chaque recalage. Une application
+de suivi alimentaire qui fabrique une spirale descendante fabrique un trouble ;
+c'est exactement ce que le plafond de déficit cherche à empêcher par ailleurs.
+
+Le recalage a donc besoin des repas notés, pas seulement des pesées.
+
+### Ce qu'il exige avant de se prononcer
+
+| | |
+|---|---|
+| 42 jours | entre la première et la dernière pesée — en dessous, on mesure de l'eau |
+| 8 pesées | une droite sur trois points ne décrit rien |
+| 21 journées de repas notés | sur la période couverte par les pesées, et pas ailleurs |
+
+### Deux statistiques choisies pour leur robustesse
+
+Ce chiffre pilote une cible calorique pendant des mois. Une seule journée saisie
+de travers ne doit donc pas pouvoir le déplacer — et le stress test a montré que
+c'était possible.
+
+**Les apports : moyenne élaguée, pas moyenne.** Une journée notée à 99 999 g
+d'huile — 900 000 kcal — portait la moyenne de 2 600 à 10 000 kcal/jour, et la
+dépense « recalée » à 10 119 kcal. Taper 999 au lieu de 99 arrive, et il n'y a
+aucune raison de refuser la saisie : personne n'a à décider de ce que quelqu'un
+a le droit de manger. On écarte donc un dixième des valeurs de chaque côté avant
+de moyenner. Sur les 21 journées minimum, cela retire deux journées par bout :
+assez pour absorber une faute de frappe et un réveillon, trop peu pour déformer
+une habitude.
+
+**La pente du poids : Theil-Sen, pas les moindres carrés.** La pente retenue est
+la **médiane des pentes de toutes les paires de pesées**. Une pesée à 724 kg au
+lieu de 72,4 passe les bornes de saisie — 724 kg est un poids humain possible, et
+une application qui refuserait de noter le sien serait indéfendable. Les moindres
+carrés se laissent emporter par ce seul point ; la médiane des pentes ne bouge
+pas tant que la majorité des paires est saine.
+
+Dans les deux cas, on ne calcule pas sur deux extrémités : personne ne monte sur
+la balance tous les jours, et la pesée du lendemain d'un repas de fête ne doit
+pas emporter le résultat.
+
+### Ce qu'il refuse de faire
+
+Au-delà de **40 % d'écart** avec la formule, Daylog ne recale pas et le dit.
+Mifflin-St Jeor tourne autour de ±15 % : un écart de moitié ne vient pas d'elle,
+mais d'un journal alimentaire incomplet, d'une balance changée ou d'une période
+de maladie. Adopter le chiffre reviendrait à proposer une cible bâtie sur des
+repas qui n'ont pas été notés — c'est-à-dire, presque toujours, une cible trop
+basse.
+
+Limite à énoncer et jamais à corriger en douce : **un journal alimentaire est
+sous-déclaré**, souvent de 10 à 30 %. La dépense calculée ici hérite de ce
+biais. Elle reste plus proche de la vérité que la formule seule, parce que la
+variation de poids, elle, ne ment pas — mais ce n'est pas une mesure, et l'écran
+le dit derrière son « i ».
+
+### Ce que ça change
 
 Au bout de deux mois de suivi régulier, l'estimation ne dépend pratiquement plus
 de la formule de départ, quel que soit le corps de la personne.
