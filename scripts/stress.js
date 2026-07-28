@@ -234,6 +234,7 @@ await page.evaluate(async () => {
     cycle: true,
     health: true,
     activity: true,
+    money: true,
   });
 });
 await page.reload({ waitUntil: 'networkidle' });
@@ -393,6 +394,72 @@ if ((bouge.sessions || []).length !== 1) {
   found('activite', `distance enregistree : ${bouge.meters} au lieu de 4200 m`);
 } else {
   ok('une seance impossible n est pas enregistree, la distance l est');
+}
+
+// ══════════════════════════════════════════ 3 quater. argent
+
+/*
+ * Ce que cherche cette section : une balance qui ne tombe pas juste, et un
+ * virement compte comme un revenu.
+ *
+ * Les deux se voient tout de suite a l'ecran et jamais dans un test unitaire
+ * ecrit apres coup : le premier parce qu'il faut plusieurs saisies pour que la
+ * virgule flottante derape, le second parce qu'il demande de lire trois
+ * chiffres a la fois.
+ */
+await page.locator('#money-amount').fill('12,50');
+await page.locator('.btn-primary:has-text("Ajouter la ligne")').click();
+await page.waitForTimeout(250);
+
+// Un remboursement recu : il doit bouger la balance sans devenir un revenu.
+await page.locator('.flow-btn:has-text("Virement")').click();
+await page.waitForTimeout(200);
+await page.locator('#money-amount').fill('5');
+await page.locator('#money-dir-in').check();
+await page.locator('.btn-primary:has-text("Ajouter la ligne")').click();
+await page.waitForTimeout(250);
+
+// Une saisie impossible ne doit rien ajouter.
+await page.locator('.flow-btn:has-text("Dépense")').click();
+await page.waitForTimeout(200);
+await page.locator('#money-amount').fill('0');
+await page.locator('.btn-primary:has-text("Ajouter la ligne")').click();
+await page.waitForTimeout(250);
+
+await auditScreen('argent apres trois saisies');
+
+const chiffres = await page.evaluate(() => {
+  const lire = (nom) => {
+    for (const f of document.querySelectorAll('.fact')) {
+      if (f.querySelector('dt')?.textContent.trim() === nom) {
+        return f.querySelector('dd')?.textContent.trim() || null;
+      }
+    }
+    return null;
+  };
+  return { depense: lire('Dépensé'), recu: lire('Reçu'), balance: lire('Balance') };
+});
+
+// 12,50 depenses, 5 rembourses : depense 12,50, recu 0, balance -7,50.
+const attenduArgent = { depense: '12,50', recu: '0,00', balance: '−7,50' };
+for (const [cle, valeur] of Object.entries(attenduArgent)) {
+  const lu = (chiffres[cle] || '').replace(/[^\d,−+-]/g, '');
+  if (lu !== valeur) {
+    found('argent', `${cle} affiche « ${chiffres[cle]} », attendu « ${valeur} »`);
+  }
+}
+if (chiffres.recu && /5,00/.test(chiffres.recu)) {
+  found('argent', 'un remboursement recu a ete compte comme un revenu');
+}
+
+await page.waitForTimeout(2400);
+const sous = (await readDays())[0]?.modules?.money || {};
+if ((sous.entries || []).length !== 2) {
+  found('argent', `${(sous.entries || []).length} ligne(s) enregistree(s) au lieu de deux`);
+} else if (sous.entries[0].amount !== 1250) {
+  found('argent', `montant enregistre : ${sous.entries[0].amount} au lieu de 1250 centimes`);
+} else {
+  ok('les montants sont stockes en centimes entiers, un zero n est pas enregistre');
 }
 
 // ══════════════════════════════════════════════ 4. survie au rechargement

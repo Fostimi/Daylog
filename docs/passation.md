@@ -20,18 +20,19 @@ est déployée sur https://fostimi.github.io/Daylog/.
 | ✅ | Santé : mesures choisies, douleur, digestion, symptômes, traitements |
 | ✅ | Activité : catalogue trié par mobilité, distance, séances, jour de repos |
 | ✅ | Recalage de l'estimation énergétique sur les pesées et les repas notés |
+| ✅ | Argent : dépenses, revenus, virements, balance en centimes entiers |
 | ✅ | Vue hebdomadaire : récap, comparaison, accès à chaque journée |
 | ✅ | Bilan : graphiques, moyennes, phrases de synthèse |
 | ✅ | « Comment ça marche » : ce que l'app calcule et ce qu'elle refuse |
 | ✅ | Sauvegarde, restauration, partage sélectif par module |
-| ⬜ | Argent, apprentissage, productivité |
+| ⬜ | Apprentissage, productivité |
 | ⬜ | Verrouillage par code, notifications, publication sur les stores |
 
-**Poids** : 18,3 Ko à l'ouverture quotidienne, 24,8 Ko à la première ouverture,
-71 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
+**Poids** : 18,5 Ko à l'ouverture quotidienne, 25,0 Ko à la première ouverture,
+76 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
 télécharge). Les deux premiers sont ceux à surveiller.
 
-**Vérifications** : 259 tests unitaires, 10 fuseaux horaires, 165 vérifications
+**Vérifications** : 279 tests unitaires, 10 fuseaux horaires, 165 vérifications
 navigateur, plus un stress test qui cherche ce qu'on n'avait pas prévu.
 `npm run verify` enchaîne le tout.
 
@@ -74,6 +75,12 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 11. **Les calories d'une séance n'ouvrent aucun crédit.** Le facteur d'activité
     du profil les compte déjà ; les ajouter à une cible ferait manger deux fois
     la même séance. Voir [activite.md](activite.md).
+12. **Les montants sont des entiers de centimes.** Additionner des flottants
+    fait afficher une balance à −0,00999999 € au bout de trente saisies, et
+    aucun arrondi d'affichage ne le répare. Voir [argent.md](argent.md).
+13. **Un virement n'est ni une dépense ni un revenu.** Il bouge la balance et
+    reste hors des deux totaux, sans quoi les catégories ne veulent plus rien
+    dire. Voir [argent.md](argent.md).
 
 ## Là où il faut faire attention
 
@@ -96,10 +103,9 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 1. **Historique navigable, la suite** — la vue hebdomadaire ouvre déjà
    n'importe quelle journée de la semaine affichée, et on remonte de semaine en
    semaine. Restent un calendrier mensuel et une recherche.
-2. **Argent** — dépenses par catégorie, revenus, virements, balance du jour.
-   C'est le prochain gros morceau du cahier des charges.
-3. **Apprentissage et productivité** — sessions, lectures, heures de travail.
-4. **Polissage** — thèmes de couleur, recalcul dynamique des quantités,
+2. **Apprentissage et productivité** — sessions, lectures, heures de travail.
+   Ce sont les deux dernières sections du cahier des charges sans code.
+3. **Polissage** — thèmes de couleur, recalcul dynamique des quantités,
    réévaluation du « i » (est-il compris de tout le monde ?).
 
 ## Questions ouvertes
@@ -125,4 +131,6 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
   série
 - [activite.md](activite.md) — pourquoi les calories d'une séance n'ouvrent
   aucun crédit
+- [argent.md](argent.md) — les centimes entiers, et pourquoi un virement n'est
+  ni une dépense ni un revenu
 - [deploiement.md](deploiement.md) — mise en ligne

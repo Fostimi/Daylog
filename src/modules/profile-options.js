@@ -37,6 +37,12 @@ export const THEMES = [
     modules: ['activity'],
   },
   {
+    id: 'money',
+    label: 'Argent',
+    hint: 'Dépenses, revenus, remboursements',
+    modules: ['money'],
+  },
+  {
     id: 'health',
     label: 'Santé',
     // Le libelle enumere volontairement : « Santé » tout court laisse imaginer

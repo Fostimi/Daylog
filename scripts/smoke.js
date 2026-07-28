@@ -1304,10 +1304,15 @@ check(
  *
  * Aucune session n'atteint ce chiffre -- il faudrait ouvrir le bilan, les
  * donnees, le profil et l'aide, en ayant active tous les suivis. Le plafond est
- * passe de 45 a 60 Ko avec la nutrition et sa base d'aliments, puis de 60 a
- * 75 Ko avec la sante : le cumul grandit mecaniquement a chaque module, et le
- * contraindre reviendrait a refuser des fonctionnalites pour un chiffre que
- * personne ne telecharge.
+ * passe de 45 a 60 Ko avec la nutrition et sa base d'aliments, de 60 a 75 avec
+ * la sante, puis de 75 a 90 avec l'activite, la semaine et l'argent : le cumul
+ * grandit mecaniquement a chaque module, et le contraindre reviendrait a
+ * refuser des fonctionnalites pour un chiffre que personne ne telecharge.
+ *
+ * A relever une quatrieme fois, il faudra plutot le remplacer : ce qui
+ * mesurerait vraiment quelque chose serait « le poids du plus gros ecran » ou
+ * « la somme des ecrans qu'une personne ouvre reellement », pas un cumul que
+ * personne n'atteint et qu'on releve a chaque livraison.
  *
  * Ce plafond ne sert donc pas a tenir un budget, mais a reperer un accident :
  * une dependance entrainee par megarde, une base de donnees dupliquee, un
@@ -1321,8 +1326,8 @@ check(
 const allFiles = ['index.html', ...assets.map((f) => `assets/${f}`)];
 const totalWeight = (await Promise.all(allFiles.map(gzippedSize))).reduce((a, b) => a + b, 0);
 check(
-  'cumul de tous les ecrans sous 75 Ko',
-  totalWeight < 75 * 1024,
+  'cumul de tous les ecrans sous 90 Ko',
+  totalWeight < 90 * 1024,
   `${(totalWeight / 1024).toFixed(1)} Ko`
 );
 

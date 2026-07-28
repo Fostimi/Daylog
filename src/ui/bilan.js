@@ -202,6 +202,38 @@ export function createBilanView({ store, root, go, alert = null }) {
   }
 
   /**
+   * Bilan de l'argent.
+   *
+   * Trois chiffres, et pas un budget. Le cahier des charges n'en demande pas,
+   * et une application qui dirait « tu as trop depense en restaurants » ferait
+   * exactement ce qu'elle refuse partout ailleurs : juger un releve.
+   *
+   * Le classement par categorie exigerait de relire les fiches completes -- les
+   * resumes ne portent que les trois totaux. Il vaut mieux le laisser a l'ecran
+   * du jour que faire relire quatre-vingt-dix fiches pour un camembert.
+   */
+  async function moneyCard(rows) {
+    if (!rows.some((r) => typeof r?.balance === 'number')) return null;
+    const { periodTotals, formatMoney } = await import('../core/money.js');
+    const currency = store.getCapabilities()?.currency || 'EUR';
+    const totals = periodTotals(rows);
+
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title' }, 'Argent'),
+      el('dl', { class: 'facts' }, [
+        fact('Jours notés', String(totals.days)),
+        totals.spent !== null && fact('Dépensé', formatMoney(totals.spent, currency)),
+        totals.earned !== null && fact('Reçu', formatMoney(totals.earned, currency)),
+        fact('Balance', formatMoney(totals.balance, currency, { sign: true })),
+      ].filter(Boolean)),
+      el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        'Sur les journées où tu as noté quelque chose. Les virements bougent la ' +
+          'balance sans entrer dans les deux autres totaux.'
+      ),
+    ]);
+  }
+
+  /**
    * Courbe de poids.
    *
    * Une echelle calee sur les valeurs relevees, et non sur zero : partir de
@@ -236,6 +268,7 @@ export function createBilanView({ store, root, go, alert = null }) {
       cycleCard(end).catch(() => null),
     ]);
     const healthBlock = await healthCard(rows).catch(() => null);
+    const moneyBlock = await moneyCard(rows).catch(() => null);
 
     // On aligne les resumes sur la suite complete des jours : les journees non
     // suivies deviennent des trous, pas des zeros.
@@ -293,6 +326,7 @@ export function createBilanView({ store, root, go, alert = null }) {
         cycleBlock,
         healthBlock,
         activityCard(rows),
+        moneyBlock,
 
         ...(() => {
           const phrases = buildInsights(rows);

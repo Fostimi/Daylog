@@ -233,6 +233,45 @@ export function registerCoreModules() {
     },
   });
 
+  // ---------------------------------------------------------------- argent
+  // Les montants du resume sont EN CENTIMES, comme partout ailleurs dans le
+  // module : additionner des flottants ferait afficher une balance a
+  // -0,009999999999990905 € au bout de trente saisies, et aucun arrondi a
+  // l'affichage ne repare ça.
+  registerModule({
+    id: 'money',
+    label: 'Argent',
+    icon: 'money',
+    defaultEnabled: false,
+    order: 70,
+    view: () => import('./views/money.js'),
+    summarize(data) {
+      const entries = data?.entries || [];
+      if (!entries.length) return { spent: null, earned: null, balance: null };
+
+      let spent = 0;
+      let earned = 0;
+      let moved = 0;
+      for (const entry of entries) {
+        const amount = typeof entry?.amount === 'number' && Number.isFinite(entry.amount)
+          ? Math.round(entry.amount)
+          : 0;
+        if (amount <= 0) continue;
+        if (entry.kind === 'expense') spent += amount;
+        else if (entry.kind === 'income') earned += amount;
+        // Un virement bouge la balance sans entrer dans les deux totaux : se
+        // faire rembourser n'est pas un revenu, et rembourser n'est pas une
+        // depense de plus.
+        else if (entry.kind === 'transfer') moved += entry.direction === 'out' ? -amount : amount;
+      }
+      return {
+        spent: spent || null,
+        earned: earned || null,
+        balance: earned + moved - spent,
+      };
+    },
+  });
+
   // ------------------------------------------------------------------ note
   registerModule({
     id: 'note',

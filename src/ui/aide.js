@@ -270,6 +270,31 @@ export function createAideView({ store, root, go, alert = null }) {
             ),
           ]),
 
+        modules.money &&
+          section('Dépenses, revenus, virements', [
+            p(
+              'Trois chiffres, parce qu’ils ne racontent pas la même chose. ',
+              el('strong', {}, 'La balance'),
+              ' additionne tout ce qui a bougé, virements compris ; « Dépensé » et ' +
+                '« Reçu » les excluent.'
+            ),
+            p(
+              'Se faire rembourser un repas n’est pas un revenu, et rembourser un ami ' +
+                'n’est pas une dépense de loisir. Sans cette séparation, un mois où tu ' +
+                'avances de l’argent pour des amis afficherait des revenus et des ' +
+                'dépenses gonflés, et tes catégories ne voudraient plus rien dire.'
+            ),
+            p(
+              'Daylog ne convertit aucune monnaie : sans réseau, aucun taux de change ' +
+                'ne peut être à jour, et un taux figé serait faux dès le lendemain. La ' +
+                'monnaie choisie sert d’unité.'
+            ),
+            p(
+              'Aucun budget, aucun plafond, aucune alerte de dépassement. C’est un ' +
+                'relevé, pas une tutelle.'
+            ),
+          ]),
+
         section('Ce que Daylog n’est pas', [
           p(
             'Un outil de suivi, ',
