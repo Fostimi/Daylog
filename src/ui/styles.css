@@ -701,11 +701,17 @@ body {
   cursor: pointer;
 }
 
+/* `min-width: 0` autorise la colonne a retrecir, mais ne fait rien contre un
+   mot plus long que la ligne : les libelles de traitement sont saisis a la
+   main, et « Hydroxychloroquine » n'offre aucun point de coupure. Sans cela,
+   le texte deborde sans qu'aucun element ne depasse -- un defilement
+   horizontal dont on ne trouve jamais le coupable. */
 .onb-option-text {
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
   min-width: 0;
+  overflow-wrap: break-word;
 }
 .onb-option-label {
   font-size: 0.9375rem;
@@ -785,9 +791,14 @@ body {
   margin-bottom: 0.75rem;
 }
 
+/* `max-width` et `min-width: 0` : le libelle d'une habitude est saisi a la
+   main. « Electroencephalographie » n'offre aucun point de coupure, et une
+   puce qui prend sa largeur naturelle sort de l'ecran -- le texte s'y trouvait
+   coupe net par l'`overflow: hidden` de la puce elle-meme. */
 .chip {
   display: inline-flex;
   align-items: stretch;
+  max-width: 100%;
   border: 1px solid var(--border-strong);
   border-radius: 1.5rem;
   overflow: hidden;
@@ -802,14 +813,20 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
+  min-width: 0;
   min-height: var(--tap);
   padding: 0.5rem 0.375rem 0.5rem 0.875rem;
   font-family: inherit;
   font-size: 0.875rem;
+  text-align: left;
   color: var(--text);
   background: transparent;
   border: 0;
   cursor: pointer;
+  overflow-wrap: break-word;
+}
+.chip-toggle > span:last-child {
+  min-width: 0;
 }
 .chip.is-done .chip-toggle {
   color: var(--accent-text);
@@ -1668,4 +1685,54 @@ body {
 }
 .meal-item-main:hover .meal-item-label {
   color: var(--accent-text);
+}
+
+/* ------------------------------------------------------------------ sante */
+
+/*
+ * Refus de saisie.
+ *
+ * La couleur d'avertissement sert ici a son seul usage legitime dans cette
+ * application : dire qu'un champ n'a PAS ete enregistre. Elle ne qualifie
+ * jamais une mesure -- une temperature elevee s'affiche comme les autres. Le
+ * message porte l'information a lui seul, la couleur ne fait que le souligner.
+ */
+.field-error {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--danger);
+}
+
+/* Tension : deux champs de meme largeur, separes d'une barre. */
+.input-row .input {
+  min-width: 0;
+}
+
+.health-trend {
+  margin-top: 0.875rem;
+  padding: 0.75rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+}
+.health-trend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.health-trend-head > p {
+  min-width: 0;
+  margin-bottom: 0;
+}
+.health-trend-main {
+  font-weight: 550;
+}
+
+/* Un traitement et ses reglages forment un bloc : sans separation, la
+   modification de dose de l'un semblait appartenir au suivant. */
+.treatment + .treatment {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
 }

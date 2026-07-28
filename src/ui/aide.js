@@ -41,6 +41,7 @@ function p(...children) {
 export function createAideView({ store, root, go, alert = null }) {
   function draw() {
     const capabilities = store.getCapabilities() || {};
+    const modules = store.getModuleState() || {};
 
     mount(root, [
       el('a', { class: 'skip-link', href: '#main' }, 'Aller au contenu'),
@@ -178,6 +179,55 @@ export function createAideView({ store, root, go, alert = null }) {
               'journées déjà notées.'
           ),
         ]),
+
+        // Comme la section du cycle : elle n'apparait que pour qui suit sa
+        // sante. Une documentation qui decrit des ecrans absents est une
+        // documentation qu'on cesse de croire.
+        modules.health &&
+          section('Les chiffres de santé', [
+            p(
+              'Daylog ',
+              el('strong', {}, 'ne qualifie aucune mesure'),
+              '. Pas de « normal », pas d’« élevé », aucune couleur d’alerte sur ' +
+                'une tension ou un pouls. Il ne connaît ni ton âge, ni tes ' +
+                'antécédents, ni ce que ton médecin t’a dit : en tirer un jugement ' +
+                'serait inventer un avis médical à partir de rien.'
+            ),
+            p(
+              'Une saisie peut en revanche être ',
+              el('strong', {}, 'refusée'),
+              ' : 370 °C est une virgule oubliée, et l’enregistrer fausserait toutes ' +
+                'tes moyennes. Le refus dit ce que Daylog sait noter, jamais ce qu’un ' +
+                'corps a le droit d’afficher — et rien n’est corrigé à ta place, ' +
+                'arrondir une mesure reviendrait à en inventer une.'
+            ),
+            p(
+              'Tu ne vois que les mesures que tu as cochées dans « Ce que je note ». ' +
+                'Les treize champs du départ tiendraient trois jours ; deux champs ' +
+                'tiennent des années.'
+            ),
+            p(
+              'Le poids est traité comme une ',
+              el('strong', {}, 'série'),
+              ', jamais comme une valeur : il varie de plus d’un kilo dans une même ' +
+                'journée. La tendance compare la moyenne de tes premières pesées à ' +
+                'celle des dernières, et ne s’affiche pas avant quatre pesées. Ta ' +
+                'dernière pesée met à jour le poids de référence de ton profil — ' +
+                'compléter une journée oubliée ne le fait jamais reculer.'
+            ),
+            p(
+              'Une prise de traitement enregistre la ',
+              el('strong', {}, 'dose du jour'),
+              ', figée. Changer un dosage aujourd’hui ne réécrit pas les mois passés : ' +
+                'c’est ce qui permet de relire un traitement qui évolue et de voir à ' +
+                'quelle dose correspondait quel ressenti.'
+            ),
+            p(
+              'Aucun oubli n’est signalé. Une prise notée est une information ; une ' +
+                'case vide n’en est pas une, et Daylog ne la transformera pas en ' +
+                'reproche.'
+            ),
+          ]),
 
         section('Ce que Daylog n’est pas', [
           p(

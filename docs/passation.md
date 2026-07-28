@@ -17,17 +17,18 @@ est déployée sur https://fostimi.github.io/Daylog/.
 | ✅ | Cycle menstruel : flux, symptômes, repère de prochaines règles, retard |
 | ✅ | Alimentation : 130 aliments livrés, aliments et repas à soi, cibles |
 | ✅ | Profil complet : corps, genre, activité, objectif |
+| ✅ | Santé : mesures choisies, douleur, digestion, symptômes, traitements |
 | ✅ | Bilan : graphiques, moyennes, phrases de synthèse |
 | ✅ | « Comment ça marche » : ce que l'app calcule et ce qu'elle refuse |
 | ✅ | Sauvegarde, restauration, partage sélectif par module |
-| ⬜ | Activité physique, santé et traitements, argent, apprentissage |
+| ⬜ | Activité physique, argent, apprentissage |
 | ⬜ | Verrouillage par code, notifications, publication sur les stores |
 
-**Poids** : 17,5 Ko à l'ouverture quotidienne, 23 Ko à la première ouverture,
-53 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
+**Poids** : 17,8 Ko à l'ouverture quotidienne, 23,5 Ko à la première ouverture,
+61 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
 télécharge). Les deux premiers sont ceux à surveiller.
 
-**Vérifications** : 183 tests unitaires, 10 fuseaux horaires, 165 vérifications
+**Vérifications** : 210 tests unitaires, 10 fuseaux horaires, 165 vérifications
 navigateur, plus un stress test qui cherche ce qu'on n'avait pas prévu.
 `npm run verify` enchaîne le tout.
 
@@ -73,9 +74,10 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 
 ## La suite, dans l'ordre suggéré
 
-1. **Santé et traitements** — c'est le gros morceau suivant du cahier des
-   charges, et il débloque le suivi du poids au jour le jour, qui branchera le
-   recalage automatique de l'estimation énergétique sur les faits observés.
+1. **Recalage énergétique sur les faits** — `calibrate()` existe dans
+   `core/nutrition.js` et n'est branché nulle part. La santé fournit désormais
+   ce qui lui manquait : une série de poids. C'est la suite immédiate, et la
+   moins chère.
 2. **Activité physique** — catalogue d'exercices, distances, calories actives.
    Attention : le niveau d'activité du profil et l'activité notée au jour le
    jour ne doivent pas se compter deux fois.
@@ -104,4 +106,6 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 - [cycle.md](cycle.md) — les calculs de cycle, et ce que Daylog refuse de
   calculer
 - [nutrition.md](nutrition.md) — les arbitrages du suivi alimentaire
+- [sante.md](sante.md) — les bornes de saisie, les doses figées, le poids comme
+  série
 - [deploiement.md](deploiement.md) — mise en ligne

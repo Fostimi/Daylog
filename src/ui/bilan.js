@@ -101,6 +101,92 @@ export function createBilanView({ store, root, go, alert = null }) {
     ]);
   }
 
+  /**
+   * Bilan de sante.
+   *
+   * Ne s'affiche que si quelque chose a ete releve sur la periode : une carte
+   * de tirets n'apprend rien, et la plupart des gens ne notent qu'une ou deux
+   * de ces mesures. Chaque ligne suit la meme regle -- pas de mesure, pas de
+   * ligne -- plutot qu'un tableau fixe ou l'on chercherait sa donnee parmi six
+   * cases vides.
+   *
+   * Aucun chiffre n'est qualifie. Une tension moyenne s'affiche, elle n'est ni
+   * verte ni rouge : Daylog ne sait pas ce qu'elle signifie pour la personne
+   * qui la lit, et le laisser croire serait un diagnostic deguise.
+   *
+   * Le calcul n'est telecharge que s'il sert.
+   */
+  async function healthCard(rows) {
+    const KEYS = ['weightKg', 'bpmRest', 'bpmMin', 'bpmMax', 'tempC', 'bpSys', 'spo2', 'pain'];
+    if (!rows.some((r) => KEYS.some((k) => typeof r?.[k] === 'number'))) return null;
+
+    const { weightTrend } = await import('../core/health.js');
+    const trend = weightTrend(rows);
+    const last = [...rows].reverse().find((r) => typeof r.weightKg === 'number');
+
+    const lines = [
+      last && fact('Dernière pesée', formatNumber(last.weightKg, { digits: 1 }), 'kg'),
+      trend.change !== null &&
+        fact(
+          'Tendance',
+          `${trend.change > 0 ? '+' : trend.change < 0 ? '−' : ''}` +
+            formatNumber(Math.abs(trend.change), { digits: 1 }),
+          `kg sur ${trend.days} j`
+        ),
+      meanOf(rows, 'bpmRest') !== null &&
+        fact('Pouls au repos', formatNumber(round(meanOf(rows, 'bpmRest'), 0)), 'bpm'),
+      meanOf(rows, 'tempC') !== null &&
+        fact('Température', formatNumber(round(meanOf(rows, 'tempC'), 1), { digits: 1 }), '°C'),
+      meanOf(rows, 'bpSys') !== null &&
+        fact(
+          'Tension',
+          `${formatNumber(round(meanOf(rows, 'bpSys'), 0))}/` +
+            `${formatNumber(round(meanOf(rows, 'bpDia'), 0))}`,
+          'mmHg'
+        ),
+      meanOf(rows, 'spo2') !== null &&
+        fact('Oxygénation', formatNumber(round(meanOf(rows, 'spo2'), 0)), '%'),
+      meanOf(rows, 'pain') !== null &&
+        fact('Douleur', formatNumber(round(meanOf(rows, 'pain'), 1), { digits: 1 }), '/ 10'),
+    ].filter(Boolean);
+
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'card-title' }, 'Santé'),
+      el('dl', { class: 'facts' }, lines),
+      el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        'Des relevés, sans interprétation. Ce sont ces chiffres que ton extrait ' +
+          '« Santé » emporte.'
+      ),
+    ]);
+  }
+
+  /**
+   * Courbe de poids.
+   *
+   * Une echelle calee sur les valeurs relevees, et non sur zero : partir de
+   * zero pour un poids de 72 kg ecraserait toute la courbe sur un dixieme de la
+   * hauteur, et les deux kilos qu'on cherche justement a voir deviendraient
+   * invisibles. C'est pour la meme raison que ce n'est pas un histogramme.
+   */
+  function weightChart(labels, values) {
+    const known = values.filter((v) => typeof v === 'number');
+    if (known.length < 2) return null;
+    const lo = Math.min(...known);
+    const hi = Math.max(...known);
+    // Une marge d'au moins 500 g, sinon une serie presque plate remplit
+    // l'ecran de bruit et donne a voir une variation qui n'existe pas.
+    const pad = Math.max((hi - lo) * 0.15, 0.5);
+    return el('div', { class: 'card' }, [
+      lineChart({
+        title: 'Poids',
+        labels,
+        series: [{ label: 'Poids', values }],
+        min: Math.floor((lo - pad) * 10) / 10,
+        max: Math.ceil((hi + pad) * 10) / 10,
+      }),
+    ]);
+  }
+
   async function draw() {
     const end = today(store.getSettings().dayStartHour || 0);
     const dates = lastNDays(periodDays, end);
@@ -108,6 +194,7 @@ export function createBilanView({ store, root, go, alert = null }) {
       db.getSummaries(dates[0], end),
       cycleCard(end).catch(() => null),
     ]);
+    const healthBlock = await healthCard(rows).catch(() => null);
 
     // On aligne les resumes sur la suite complete des jours : les journees non
     // suivies deviennent des trous, pas des zeros.
@@ -163,6 +250,7 @@ export function createBilanView({ store, root, go, alert = null }) {
         ]),
 
         cycleBlock,
+        healthBlock,
 
         ...(() => {
           const phrases = buildInsights(rows);
@@ -223,6 +311,8 @@ export function createBilanView({ store, root, go, alert = null }) {
             unit: 'ml',
           }),
         ]),
+
+        tracked > 0 && weightChart(labels, value('weightKg')),
 
         el('p', { class: 'footer-note' },
           'Outil de suivi, pas un dispositif médical.'

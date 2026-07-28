@@ -163,6 +163,45 @@ export function registerCoreModules() {
     },
   });
 
+  // ---------------------------------------------------------------- sante
+  // Le seul module dont les cles de resume sont declarees a deux endroits :
+  // ici, et dans `MEASURES` de core/health.js. C'est volontaire -- importer le
+  // noyau de sante ferait payer son poids a tout le monde, y compris a qui n'a
+  // jamais active le module -- et un test verifie que les deux listes ne
+  // divergent pas.
+  //
+  // `defaultEnabled: false` : un module qui apparait tout seul dans la journee
+  // de quelqu'un qui ne l'a pas demande est une intrusion, a plus forte raison
+  // celui-ci. Il s'active a la premiere ouverture ou dans les reglages.
+  registerModule({
+    id: 'health',
+    label: 'Santé',
+    icon: 'health',
+    defaultEnabled: false,
+    order: 55,
+    view: () => import('./views/health.js'),
+    summarize(data) {
+      const n = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+      return {
+        weightKg: n(data?.weight),
+        bodyFatPct: n(data?.bodyFat),
+        tempC: n(data?.temp),
+        bpSys: n(data?.bp?.systolic),
+        bpDia: n(data?.bp?.diastolic),
+        spo2: n(data?.spo2),
+        bpmRest: n(data?.bpmRest),
+        bpmMin: n(data?.bpmMin),
+        bpmMax: n(data?.bpmMax),
+        pain: n(data?.pain?.level),
+        // `ailments` et non `symptoms` : le cycle publie deja cette cle, et
+        // deux modules qui ecrivent la meme case du resume s'ecraseraient
+        // silencieusement selon l'ordre d'enregistrement.
+        ailments: data?.symptoms?.length || null,
+        doses: data?.doses?.length || null,
+      };
+    },
+  });
+
   // ------------------------------------------------------------------ note
   registerModule({
     id: 'note',

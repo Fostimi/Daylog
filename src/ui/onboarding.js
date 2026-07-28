@@ -160,8 +160,8 @@ export function createOnboarding({ store, root, onDone }) {
           ),
         ]),
         el('p', { class: 'onb-hint' },
-          "D'autres suivis arriveront : activité physique, santé et traitements, " +
-            'argent, apprentissage. Tu pourras les activer au fur et à mesure.'
+          "D'autres suivis arriveront : activité physique, argent, apprentissage. " +
+            'Tu pourras les activer au fur et à mesure.'
         ),
       ],
     }),
@@ -482,6 +482,11 @@ export function createOnboarding({ store, root, onDone }) {
       const on = answers.themes.has(theme.id);
       for (const id of theme.modules) moduleState[id] = on;
     }
+    // Repondre « oui » a la question des traitements, c'est demander de quoi
+    // les suivre. Laisser le module eteint parce que la case « Santé » n'a pas
+    // ete cochee deux ecrans plus tot serait prendre la reponse et ne rien en
+    // faire -- exactement ce qu'on reproche aux questionnaires d'installation.
+    if (answers.treatment === 'yes') moduleState.health = true;
 
     const capabilities = {
       wearable: answers.wearable && answers.wearable !== 'none' ? answers.wearable : null,

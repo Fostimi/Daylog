@@ -27,6 +27,14 @@ export const THEMES = [
     hint: 'Repas et hydratation',
     modules: ['nutrition', 'hydration'],
   },
+  {
+    id: 'health',
+    label: 'Santé',
+    // Le libelle enumere volontairement : « Santé » tout court laisse imaginer
+    // un dossier medical, alors qu'il s'agit de relever quelques chiffres.
+    hint: 'Poids, mesures, douleur, traitements',
+    modules: ['health'],
+  },
 ];
 /**
  * Marques d'appareils connectes.

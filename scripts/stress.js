@@ -217,19 +217,93 @@ await page.evaluate(async () => {
       t.objectStore('meta').put({ key, value });
       t.oncomplete = resolve;
     });
-  await put('capabilities', { cycle: 'irregular', wearable: 'garmin', mobility: 'walking' });
+  await put('capabilities', {
+    cycle: 'irregular',
+    wearable: 'garmin',
+    mobility: 'walking',
+    treatment: true,
+    // Toutes les mesures a la fois : le pire cas d'encombrement de l'ecran,
+    // celui que personne ne choisira mais qui doit tenir quand meme.
+    healthTracks: ['weight', 'bodyFat', 'temp', 'bp', 'spo2', 'bpmRest', 'bpmMin', 'bpmMax'],
+  });
   await put('modules', {
     sleep: true,
     habits: true,
     hydration: true,
     nutrition: true,
     cycle: true,
+    health: true,
   });
 });
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForSelector('[data-meal-slot]');
+await page.waitForSelector('#health-m-weight');
 await auditScreen('journee, tous modules actifs');
 ok('tous les modules cohabitent sur la meme journee');
+
+// ══════════════════════════════════════════════ 2 bis. saisies de sante
+
+/*
+ * Ce que cherche cette section : une mesure refusee qui laisse malgre tout une
+ * trace enregistree, et un libelle saisi a la main qui casse la mise en page.
+ *
+ * Les deux sont passes tres pres. Un nom de traitement est du texte libre :
+ * « Hydroxychloroquine » n'offre aucun point de coupure, et un mot plus long
+ * que la ligne deborde sans qu'aucun ELEMENT ne depasse -- un defilement
+ * horizontal dont le controle habituel ne trouve jamais le coupable.
+ */
+async function fill(selector, value) {
+  await page.locator(selector).fill(value);
+  await page.locator(selector).blur();
+  await page.waitForTimeout(150);
+}
+
+// Des virgules oubliees, une tension a l'envers, des zeros.
+await fill('#health-m-temp', '370');
+await fill('#health-m-weight', '0');
+await fill('#health-bp-sys', '80');
+await fill('#health-bp-dia', '120');
+await auditScreen('sante apres saisies refusees');
+
+// Puis les memes, correctes.
+await fill('#health-m-temp', '37.2');
+await fill('#health-m-weight', '72.4');
+await fill('#health-bp-sys', '118');
+await fill('#health-bp-dia', '76');
+
+const refuses = await page.locator('.field-error').count();
+if (refuses) found('sante', `${refuses} refus persiste apres correction`);
+else ok('un refus de saisie disparait des que la valeur devient correcte');
+
+// Un nom de traitement volontairement long et insecable.
+await page.locator('summary:has-text("Ajouter un traitement")').click();
+await page.waitForTimeout(150);
+await page.locator('#health-trt-name').fill('Hydroxychloroquine');
+await page.locator('#health-trt-dose').fill('200');
+await page.locator('.btn-primary:has-text("Ajouter")').click();
+await page.waitForTimeout(400);
+await page.locator('input[id^="health-take-"]').first().check();
+await page.waitForTimeout(200);
+await auditScreen('sante avec un traitement au nom interminable');
+
+await page.waitForTimeout(2400);
+const santeJour = (await readDays())[0]?.modules?.health || {};
+if (santeJour.temp === 370 || santeJour.weight === 0) {
+  found('sante', 'une mesure refusee a quand meme ete enregistree');
+} else if (santeJour.temp !== 37.2 || santeJour.weight !== 72.4) {
+  found('sante', `les mesures corrigees n ont pas ete enregistrees : ${JSON.stringify(santeJour)}`);
+} else {
+  ok('une mesure refusee ne laisse aucune trace, la correction est enregistree');
+}
+
+// La prise porte ses valeurs figees : sans elles, un extrait partage ne
+// contiendrait que des identifiants illisibles.
+const prise = santeJour.doses?.[0];
+if (!prise?.label || prise.dose !== 200) {
+  found('sante', `la prise ne porte pas ses valeurs figees : ${JSON.stringify(prise)}`);
+} else {
+  ok('une prise de traitement fige son libelle et sa dose');
+}
 
 // ══════════════════════════════════════════════ 3. saisie desordonnee
 
@@ -349,6 +423,9 @@ await page.evaluate(async () => {
     d.setDate(d.getDate() - i);
     const date = key(d);
     const flow = i % 28 < 5 ? 3 : null;
+    // Une pesee deux jours sur trois, avec le bruit qu'ont les vraies balances :
+    // c'est ce qui fait travailler le lissage de la tendance de poids.
+    const weight = i % 3 ? Math.round((72 + i * 0.005 + ((i * 7) % 11) * 0.1) * 10) / 10 : null;
     t.objectStore('days').put({
       date,
       schemaVersion: 1,
@@ -356,9 +433,14 @@ await page.evaluate(async () => {
         mood: { checkins: { morning: { mood: 7, energy: 6, stress: 4, loggedAt: '2026-01-01' } } },
         nutrition: { items: [{ id: `x${i}`, slot: 'lunch', label: 'Test', quantity: 100, unit: 'g', kcal: 500, protein: 20 }] },
         ...(flow ? { cycle: { flow } } : {}),
+        ...(weight ? { health: { weight, bpmRest: 54 } } : {}),
       },
     });
-    t.objectStore('summaries').put({ date, mood: 7, energy: 6, stress: 4, kcal: 500, protein: 20, ...(flow ? { flow } : {}) });
+    t.objectStore('summaries').put({
+      date, mood: 7, energy: 6, stress: 4, kcal: 500, protein: 20,
+      ...(flow ? { flow } : {}),
+      ...(weight ? { weightKg: weight, bpmRest: 54 } : {}),
+    });
   }
   await new Promise((resolve) => { t.oncomplete = resolve; });
 });
