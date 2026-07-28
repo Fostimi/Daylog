@@ -364,8 +364,15 @@ else ok('une quantite nulle n est pas enregistree');
 await page.locator('summary:has-text("Ajouter une séance")').click();
 await page.waitForTimeout(150);
 await page.locator('#activity-new-min').fill('45');
-await page.selectOption('#activity-new-kind', 'strength');
-await page.waitForTimeout(250);
+
+// La liste se cherche a la frappe : trente entrees ne se parcourent pas au
+// doigt, ligne par ligne.
+await page.locator('#activity-new-kind').fill('muscu');
+await page.waitForTimeout(200);
+const propositions = await page.locator('#activity-new-kind-list .suggestion').count();
+if (!propositions) found('activite', 'taper dans la liste ne propose rien');
+await page.locator('#activity-new-kind-list .suggestion').first().click();
+await page.waitForTimeout(300);
 
 const dureeGardee = await page.locator('#activity-new-min').inputValue().catch(() => '');
 const champVisible = await page.locator('#activity-new-min').isVisible().catch(() => false);
@@ -373,8 +380,21 @@ if (!champVisible) found('activite', 'changer d activite referme le formulaire e
 else if (dureeGardee !== '45') found('activite', `la duree deja tapee est perdue : « ${dureeGardee} »`);
 else ok('changer d activite ne referme pas le formulaire ni n efface la saisie');
 
-await page.locator('#activity-new-sets').fill('4');
-await page.locator('#activity-new-reps').fill('10');
+/*
+ * Les series, repetitions et charges viennent des exercices, jamais d'une
+ * saisie globale : 4x10 a 60 kg et 3x12 a 20 kg ne se resument a aucune
+ * moyenne, et demander « poids soulevé » pour la seance entiere obligeait a
+ * additionner de tete.
+ */
+if (await page.locator('#activity-new-sets').count()) {
+  await page.locator('#activity-new-sets').fill('4');
+  await page.locator('#activity-new-reps').fill('10');
+  await page.locator('#activity-new-weight').fill('60');
+  await page.locator('.btn-sm:has-text("Ajouter l’exercice")').click();
+  await page.waitForTimeout(300);
+} else {
+  found('activite', 'aucun champ d exercice pour une seance de renforcement');
+}
 await page.locator('.btn-primary:has-text("Ajouter la séance")').click();
 await page.waitForTimeout(400);
 
@@ -388,12 +408,17 @@ await page.waitForTimeout(300);
 
 await page.waitForTimeout(2400);
 const bouge = (await readDays())[0]?.modules?.activity || {};
+const seance = (bouge.sessions || [])[0];
 if ((bouge.sessions || []).length !== 1) {
   found('activite', `${(bouge.sessions || []).length} seance(s) enregistree(s) au lieu d une`);
 } else if (bouge.meters !== 4200) {
   found('activite', `distance enregistree : ${bouge.meters} au lieu de 4200 m`);
+} else if (!(seance.exercises || []).length) {
+  found('activite', `la seance ne porte pas ses exercices : ${JSON.stringify(seance)}`);
+} else if (seance.exercises[0].sets !== 4 || seance.exercises[0].weightKg !== 60) {
+  found('activite', `exercice mal enregistre : ${JSON.stringify(seance.exercises[0])}`);
 } else {
-  ok('une seance impossible n est pas enregistree, la distance l est');
+  ok('une seance porte ses exercices, une saisie impossible n est pas enregistree');
 }
 
 // ══════════════════════════════════════════ 3 quater. argent

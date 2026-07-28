@@ -42,6 +42,10 @@
  *    precision imaginaire.
  */
 
+function num(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 /**
  * Catalogue.
  *
@@ -142,6 +146,110 @@ export function moveTerms(mobility = null) {
   return { unit: 'pas', one: 'pas', label: 'Marche du jour', counts: true };
 }
 
+/**
+ * Unites de duree.
+ *
+ * Une randonnee se compte en heures, une seance de gainage en minutes. Obliger
+ * a convertir « 2 h 15 » en 135 avant de le taper est le genre de friction qui
+ * fait qu'on note la seance « plus tard », c'est-a-dire jamais.
+ *
+ * Le stockage, lui, reste en minutes : une seule unite dans les donnees, une
+ * conversion a la saisie et une a l'affichage.
+ */
+export const DURATION_UNITS = [
+  { id: 'min', label: 'minutes', minutes: 1, step: 1 },
+  { id: 'h', label: 'heures', minutes: 60, step: 0.25 },
+];
+
+export function toMinutes(value, unit = 'min') {
+  const n = num(value);
+  const u = DURATION_UNITS.find((d) => d.id === unit);
+  if (n === null || !u) return null;
+  return Math.round(n * u.minutes * 100) / 100;
+}
+
+export function fromMinutes(minutes, unit = 'min') {
+  const n = num(minutes);
+  const u = DURATION_UNITS.find((d) => d.id === unit);
+  if (n === null || !u) return null;
+  return Math.round((n / u.minutes) * 100) / 100;
+}
+
+/**
+ * Exercices de renforcement.
+ *
+ * Une seance de musculation n'a pas UNE charge et UN nombre de repetitions :
+ * elle en a autant que d'exercices. Demander « poids soulevé » pour la seance
+ * entiere obligeait a additionner de tete, et le chiffre obtenu ne voulait rien
+ * dire -- 4x10 a 60 kg et 3x12 a 20 kg ne se resument pas a une moyenne.
+ *
+ * Les exercices se saisissent donc un par un, et la seance porte leurs totaux.
+ * `bodyweight` marque ceux ou la charge est le corps : la saisie du poids y est
+ * facultative et se pre-remplit avec le poids du profil.
+ */
+export const STRENGTH_EXERCISES = [
+  { id: 'squat', label: 'Squat', group: 'Jambes' },
+  { id: 'legpress', label: 'Presse à cuisses', group: 'Jambes' },
+  { id: 'lunge', label: 'Fentes', group: 'Jambes' },
+  { id: 'deadlift', label: 'Soulevé de terre', group: 'Dos' },
+  { id: 'row', label: 'Rowing', group: 'Dos' },
+  { id: 'pulldown', label: 'Tirage vertical', group: 'Dos' },
+  { id: 'pullup', label: 'Tractions', group: 'Dos', bodyweight: true },
+  { id: 'bench', label: 'Développé couché', group: 'Poitrine' },
+  { id: 'dips', label: 'Dips', group: 'Poitrine', bodyweight: true },
+  { id: 'pushup', label: 'Pompes', group: 'Poitrine', bodyweight: true },
+  { id: 'ohp', label: 'Développé militaire', group: 'Épaules' },
+  { id: 'lateral', label: 'Élévations latérales', group: 'Épaules' },
+  { id: 'curl', label: 'Curl biceps', group: 'Bras' },
+  { id: 'triceps', label: 'Extensions triceps', group: 'Bras' },
+  { id: 'plank', label: 'Gainage', group: 'Tronc', bodyweight: true },
+  { id: 'crunch', label: 'Abdominaux', group: 'Tronc', bodyweight: true },
+  { id: 'hipthrust', label: 'Hip thrust', group: 'Fessiers' },
+  { id: 'calf', label: 'Mollets', group: 'Jambes' },
+  { id: 'other-strength', label: 'Autre exercice', group: 'Autre' },
+];
+
+export function getExercise(id) {
+  return STRENGTH_EXERCISES.find((e) => e.id === id) || null;
+}
+
+/**
+ * Totaux d'une seance de renforcement, deduits de ses exercices.
+ *
+ * Le volume est la somme des `series x repetitions x charge`. C'est la mesure
+ * qui compte en musculation -- celle qui dit si une seance a ete plus lourde
+ * que la precedente -- et elle ne se lit sur aucun des trois chiffres pris
+ * separement.
+ *
+ * Un exercice sans charge notee compte ses repetitions mais pas son volume :
+ * exclu du total plutot que compte zero, comme partout ailleurs.
+ */
+export function strengthTotals(exercises = []) {
+  let sets = 0;
+  let reps = 0;
+  let volume = 0;
+  let withLoad = 0;
+
+  for (const ex of exercises || []) {
+    const s = num(ex?.sets);
+    const r = num(ex?.reps);
+    const w = num(ex?.weightKg);
+    if (s !== null) sets += s;
+    if (s !== null && r !== null) reps += s * r;
+    if (s !== null && r !== null && w !== null) {
+      volume += s * r * w;
+      withLoad += 1;
+    }
+  }
+
+  return {
+    sets: sets || null,
+    reps: reps || null,
+    volumeKg: withLoad ? Math.round(volume) : null,
+    exercises: exercises?.length || null,
+  };
+}
+
 /** Unites de distance proposees. Le systeme imperial est demande explicitement. */
 export const DISTANCE_UNITS = [
   { id: 'km', label: 'km', meters: 1000 },
@@ -162,10 +270,6 @@ export function fromMeters(meters, unit) {
   const u = DISTANCE_UNITS.find((d) => d.id === unit);
   if (n === null || !u) return null;
   return n / u.meters;
-}
-
-function num(value) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 /**
@@ -253,12 +357,19 @@ export function dayTotals(day = {}, weightKg = null) {
       ? null
       : (moved || 0) + sessionMeters.reduce((a, b) => a + b, 0);
 
+  // Les totaux de renforcement de la journee : ils viennent des exercices de
+  // chaque seance, jamais d'une saisie globale.
+  const strength = strengthTotals(sessions.flatMap((s) => s?.exercises || []));
+
   return {
     minutes: minutes.length ? minutes.reduce((a, b) => a + b, 0) : null,
     activeKcal: kcals.length ? kcals.reduce((a, b) => a + b, 0) : null,
     meters: distance === null ? null : Math.round(distance),
     sessions: sessions.length || null,
     restDay: day?.restDay === true ? 1 : null,
+    sets: strength.sets,
+    reps: strength.reps,
+    volumeKg: strength.volumeKg,
   };
 }
 

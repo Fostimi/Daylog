@@ -28,13 +28,17 @@ import { newId } from '../../core/ids.js';
 import { formatNumber, formatDuration } from '../../core/i18n.js';
 import {
   DISTANCE_UNITS,
+  DURATION_UNITS,
+  STRENGTH_EXERCISES,
   catalogue,
   getActivity,
+  getExercise,
   moveTerms,
   toMeters,
   fromMeters,
+  toMinutes,
   stepsFromDistance,
-  sessionCalories,
+  strengthTotals,
   dayTotals,
   sanitize,
 } from '../../core/activity.js';
@@ -62,7 +66,10 @@ export async function render({ store }) {
   // symptomes du cycle, qui se refermait sous le doigt.
   let kind = list[0]?.id || 'walk';
   let formOpen = false;
+  let durationUnit = 'min';
   const draft = {};
+  // Exercices en cours de saisie pour la seance qu'on est en train d'ajouter.
+  let drafted = [];
   const errors = new Map();
 
   function data() {
@@ -129,7 +136,7 @@ export async function render({ store }) {
 
   function clearDay() {
     errors.clear();
-    write({ meters: null, sessions: null, restDay: null });
+    write({ meters: null, sessions: null, restDay: null, measuredKcal: null, avgHr: null, maxHr: null });
     draw();
   }
 
@@ -185,31 +192,111 @@ export async function render({ store }) {
   /** Une seance enregistree. */
   function sessionRow(session) {
     const activity = getActivity(session.activityId);
-    const kcal = sessionCalories(session, bodyWeight());
+    const totals = strengthTotals(session.exercises || []);
     const bits = [formatDuration(session.minutes)];
     if (typeof session.meters === 'number') {
       bits.push(`${formatNumber(fromMeters(session.meters, unit), { digits: 2 })} ${
         DISTANCE_UNITS.find((u) => u.id === unit)?.label
       }`);
     }
-    if (typeof session.sets === 'number' && typeof session.reps === 'number') {
-      bits.push(`${session.sets} × ${session.reps}`);
-    }
-    if (typeof session.weightKg === 'number') bits.push(`${formatNumber(session.weightKg)} kg`);
     if (typeof session.elevation === 'number') bits.push(`${formatNumber(session.elevation)} m D+`);
+    if (totals.sets) bits.push(`${totals.sets} séries`);
+    if (totals.reps) bits.push(`${totals.reps} répétitions`);
+    if (totals.volumeKg) bits.push(`${formatNumber(totals.volumeKg)} kg soulevés`);
 
-    return el('div', { class: 'meal-item' }, [
-      el('span', { class: 'meal-item-main', style: { cursor: 'default' } }, [
-        el('span', { class: 'meal-item-label' }, activity?.label || 'Activité'),
-        el('span', { class: 'meal-item-qty' }, bits.join(' · ')),
+    return el('div', {}, [
+      // Plus de calories sur la ligne : elles se comptent une fois, dans le
+      // compteur du haut. Repetees a chaque seance, elles donnaient a un ordre
+      // de grandeur l'allure d'une mesure, et transformaient un releve en
+      // decompte de ce qu'on a « merite ».
+      el('div', { class: 'meal-item' }, [
+        el('span', { class: 'meal-item-main', style: { cursor: 'default' } }, [
+          el('span', { class: 'meal-item-label' }, activity?.label || 'Activité'),
+          el('span', { class: 'meal-item-qty' }, bits.join(' · ')),
+        ]),
+        el('button', {
+          type: 'button',
+          class: 'chip-remove',
+          'aria-label': `Retirer ${activity?.label || 'cette séance'}`,
+          onClick: () => removeSession(session.id),
+        }, '×'),
       ]),
-      kcal !== null && el('span', { class: 'meal-item-kcal' }, `${formatNumber(kcal)} kcal`),
-      el('button', {
-        type: 'button',
-        class: 'chip-remove',
-        'aria-label': `Retirer ${activity?.label || 'cette séance'}`,
-        onClick: () => removeSession(session.id),
-      }, '×'),
+      // Le detail des exercices, replie : on le consulte rarement, mais quand
+      // on le consulte c'est pour comparer a la seance precedente.
+      (session.exercises || []).length > 0 &&
+        el('details', { class: 'foldable' }, [
+          el('summary', { class: 'foldable-head' }, [
+            el('span', { class: 'foldable-note' },
+              `${session.exercises.length} exercice${session.exercises.length > 1 ? 's' : ''}`
+            ),
+          ]),
+          ...session.exercises.map((ex) =>
+            el('p', { class: 'card-hint', style: { margin: '0 0 0.25rem' } },
+              `${getExercise(ex.exerciseId)?.label || 'Exercice'} — ` +
+                `${ex.sets ?? '?'} × ${ex.reps ?? '?'}` +
+                (typeof ex.weightKg === 'number' ? ` à ${formatNumber(ex.weightKg)} kg` : '')
+            )
+          ),
+        ]),
+    ]);
+  }
+
+  /**
+   * Liste deroulante avec saisie.
+   *
+   * Un `<select>` de trente entrees se parcourt au doigt, ligne par ligne. Ici
+   * on tape trois lettres et la liste se reduit -- et elle reste entiere si on
+   * ne tape rien, pour qui prefere parcourir. Meme motif que la recherche
+   * d'aliments : il a fait ses preuves la-bas.
+   */
+  function combobox({ id, label, items, value, onPick, placeholder }) {
+    const choisi = items.find((i) => i.id === value);
+    const input = el('input', {
+      type: 'text',
+      id,
+      class: 'input',
+      autocomplete: 'off',
+      role: 'combobox',
+      'aria-expanded': 'false',
+      'aria-controls': `${id}-list`,
+      placeholder: placeholder || 'Tape pour chercher…',
+      onInput: () => filtrer(),
+      onFocus: () => filtrer(),
+    });
+    input.value = choisi?.label || '';
+
+    const liste = el('div', {
+      class: 'suggestions',
+      id: `${id}-list`,
+      role: 'listbox',
+      'aria-label': label,
+    });
+
+    function filtrer() {
+      const q = input.value.trim().toLowerCase();
+      const trouves = items
+        .filter((i) => !q || i.label.toLowerCase().includes(q) || (i.group || '').toLowerCase().includes(q))
+        .slice(0, 8);
+      mount(liste, trouves.map((i) =>
+        el('button', {
+          type: 'button',
+          class: `suggestion${i.id === value ? ' is-current' : ''}`,
+          role: 'option',
+          'aria-selected': i.id === value ? 'true' : 'false',
+          onClick: () => {
+            input.value = i.label;
+            mount(liste, []);
+            onPick(i.id);
+          },
+        }, i.label)
+      ));
+      input.setAttribute('aria-expanded', trouves.length ? 'true' : 'false');
+    }
+
+    return el('div', { class: 'field' }, [
+      el('label', { class: 'field-label', for: id }, label),
+      input,
+      liste,
     ]);
   }
 
@@ -224,16 +311,7 @@ export async function render({ store }) {
   function addForm() {
     const activity = getActivity(kind) || list[0];
     const tracks = new Set(activity?.tracks || ['duration']);
-
-    const kindSelect = el('select', {
-      class: 'input',
-      id: 'activity-new-kind',
-      onChange: (e) => {
-        kind = e.target.value;
-        draw();
-      },
-    }, groupOptions());
-    kindSelect.value = kind;
+    const renforcement = tracks.has('sets') || tracks.has('reps');
 
     const fields = {};
     const numberInput = (name, id, label, extra = {}) => {
@@ -256,6 +334,20 @@ export async function render({ store }) {
       ]);
     };
 
+    // Duree : le nombre ET son unite. Une randonnee se compte en heures.
+    const dureeInput = el('input', {
+      type: 'number', id: 'activity-new-min', class: 'input', inputmode: 'decimal',
+      min: '0', step: durationUnit === 'h' ? '0.25' : '1',
+      placeholder: durationUnit === 'h' ? 'ex. 1,5' : 'ex. 45',
+      onInput: (e) => { draft.duration = e.target.value; },
+    });
+    dureeInput.value = draft.duration ?? '';
+    const dureeUnite = el('select', {
+      class: 'input', id: 'activity-new-min-unit', 'aria-label': 'Unité de durée',
+      onChange: (e) => { durationUnit = e.target.value; draw(); },
+    }, DURATION_UNITS.map((u) => el('option', { value: u.id }, u.label)));
+    dureeUnite.value = durationUnit;
+
     const distanceUnitSelect = el('select', {
       class: 'input',
       id: 'activity-new-dist-unit',
@@ -264,11 +356,8 @@ export async function render({ store }) {
     distanceUnitSelect.value = unit;
 
     function submit() {
-      const minutes = sanitize('minutes', fields.minutes.value);
+      const minutes = sanitize('minutes', toMinutes(Number(draft.duration), durationUnit));
       if (minutes.value === null) {
-        // On distingue « pas de durée » de « durée impossible » : les deux
-        // demandent un geste different, et un message unique enverrait
-        // chercher au mauvais endroit.
         errors.set('session', { reason: minutes.reason === 'range' ? 'duration-range' : 'minutes' });
         draw();
         return;
@@ -285,26 +374,23 @@ export async function render({ store }) {
         }
         session.meters = meters.value;
       }
-      for (const [name, field] of [
-        ['elevation', 'elevation'],
-        ['sets', 'sets'],
-        ['reps', 'reps'],
-        ['weight', 'weightKg'],
-      ]) {
-        if (!tracks.has(name) || !fields[name]?.value) continue;
-        const out = sanitize(name, fields[name].value);
+      if (tracks.has('elevation') && fields.elevation?.value) {
+        const out = sanitize('elevation', fields.elevation.value);
         if (out.reason) {
-          errors.set('session', { reason: name });
+          errors.set('session', { reason: 'elevation' });
           draw();
           return;
         }
-        session[field] = out.value;
+        session.elevation = out.value;
       }
+      // Les series, repetitions et charges viennent des exercices, jamais d'une
+      // saisie globale : 4x10 a 60 kg et 3x12 a 20 kg ne se resument a aucune
+      // moyenne.
+      if (drafted.length) session.exercises = drafted;
 
       errors.delete('session');
-      // La seance est enregistree : le brouillon repart de zero, mais le
-      // formulaire reste ouvert -- on en enchaine souvent deux.
       for (const key of Object.keys(draft)) delete draft[key];
+      drafted = [];
       addSession(session);
     }
 
@@ -321,11 +407,20 @@ export async function render({ store }) {
         el('span', { class: 'field-label' }, 'Ajouter une séance'),
         el('span', { class: 'foldable-note' }, activity?.label || ''),
       ]),
+      combobox({
+        id: 'activity-new-kind',
+        label: 'Activité',
+        items: list,
+        value: kind,
+        onPick: (id) => {
+          kind = id;
+          draw();
+        },
+      }),
       el('div', { class: 'field' }, [
-        el('label', { class: 'field-label', for: 'activity-new-kind' }, 'Activité'),
-        kindSelect,
+        el('label', { class: 'field-label', for: 'activity-new-min' }, 'Durée'),
+        el('div', { class: 'add-row' }, [dureeInput, dureeUnite]),
       ]),
-      numberInput('minutes', 'activity-new-min', 'Durée (minutes)', { step: '1', placeholder: 'ex. 45' }),
       tracks.has('distance') &&
         el('div', { class: 'field' }, [
           el('label', { class: 'field-label', for: 'activity-new-dist' }, 'Distance'),
@@ -334,9 +429,7 @@ export async function render({ store }) {
               const node = el('input', {
                 type: 'number', id: 'activity-new-dist', class: 'input',
                 inputmode: 'decimal', min: '0', step: '0.01', placeholder: 'facultatif',
-                onInput: (e) => {
-                  draft.distance = e.target.value;
-                },
+                onInput: (e) => { draft.distance = e.target.value; },
               });
               node.value = draft.distance ?? '';
               fields.distance = node;
@@ -347,19 +440,15 @@ export async function render({ store }) {
         ]),
       tracks.has('elevation') &&
         numberInput('elevation', 'activity-new-elev', 'Dénivelé positif (mètres)', { step: '1', placeholder: 'facultatif' }),
-      tracks.has('sets') &&
-        numberInput('sets', 'activity-new-sets', 'Séries', { step: '1', placeholder: 'facultatif' }),
-      tracks.has('reps') &&
-        numberInput('reps', 'activity-new-reps', 'Répétitions par série', { step: '1', placeholder: 'facultatif' }),
-      tracks.has('weight') &&
-        numberInput('weight', 'activity-new-weight', 'Charge (kg)', { step: '0.5', placeholder: 'facultatif' }),
+
+      renforcement && exerciseBlock(),
 
       error &&
         el('p', { class: 'field-error', role: 'status' },
           error.reason === 'minutes'
-            ? 'Il faut au moins une durée, en minutes.'
+            ? 'Il faut au moins une durée.'
             : error.reason === 'duration-range'
-              ? 'Daylog note une séance jusqu’à 24 heures, soit 1 440 minutes.'
+              ? 'Daylog note une séance jusqu’à 24 heures.'
               : 'Une des valeurs sort de ce que Daylog sait enregistrer.'
         ),
 
@@ -373,20 +462,149 @@ export async function render({ store }) {
     return details;
   }
 
-  /** Le catalogue, groupe, dans l'ordre que la mobilite declaree a fixe. */
-  function groupOptions() {
-    const seen = [];
-    for (const activity of list) {
-      let group = seen.find((g) => g.label === activity.group);
-      if (!group) {
-        group = { label: activity.group, items: [] };
-        seen.push(group);
+  /**
+   * Les exercices d'une seance de renforcement.
+   *
+   * Le cahier des charges le demande explicitement : le nombre de repetitions
+   * et le poids souleve d'une seance ne se saisissent pas globalement, ils
+   * VIENNENT des exercices. La seance affiche ensuite leurs totaux -- series,
+   * repetitions, volume -- et c'est le volume qui dit si une seance a ete plus
+   * lourde que la precedente.
+   */
+  function exerciseBlock() {
+    let choix = draft.exerciseId || STRENGTH_EXERCISES[0].id;
+    const totals = strengthTotals(drafted);
+
+    const champ = (name, id, label, extra = {}) => {
+      const node = el('input', {
+        type: 'number', id, class: 'input', inputmode: 'decimal', min: '0',
+        onInput: (e) => { draft[name] = e.target.value; },
+        ...extra,
+      });
+      node.value = draft[name] ?? '';
+      return { node, wrap: el('div', { class: 'field' }, [
+        el('label', { class: 'field-label', for: id }, label), node,
+      ]) };
+    };
+
+    const series = champ('sets', 'activity-new-sets', 'Séries', { step: '1', placeholder: 'ex. 4' });
+    const reps = champ('reps', 'activity-new-reps', 'Répétitions par série', { step: '1', placeholder: 'ex. 10' });
+    const charge = champ('weight', 'activity-new-weight', 'Charge (kg)', { step: '0.5', placeholder: 'facultatif' });
+
+    function ajouter() {
+      const s = sanitize('sets', series.node.value);
+      const r = sanitize('reps', reps.node.value);
+      if (s.value === null || r.value === null) {
+        errors.set('exercise', { reason: 'incomplete' });
+        draw();
+        return;
       }
-      group.items.push(activity);
+      const w = sanitize('weight', charge.node.value);
+      const ex = { exerciseId: choix, sets: s.value, reps: r.value };
+      if (w.value !== null) ex.weightKg = w.value;
+      drafted = [...drafted, ex];
+      errors.delete('exercise');
+      // On garde series et charge : on enchaine souvent le meme schema.
+      delete draft.exerciseId;
+      draw();
     }
-    return seen.map((g) =>
-      el('optgroup', { label: g.label }, g.items.map((a) => el('option', { value: a.id }, a.label)))
-    );
+
+    const erreur = errors.get('exercise');
+
+    return el('div', { class: 'health-trend' }, [
+      el('p', { class: 'health-trend-main' },
+        drafted.length
+          ? `${totals.sets} séries · ${totals.reps} répétitions` +
+            (totals.volumeKg ? ` · ${formatNumber(totals.volumeKg)} kg soulevés` : '')
+          : 'Ajoute tes exercices : les totaux de la séance en découlent.'
+      ),
+      ...drafted.map((ex, i) =>
+        el('div', { class: 'meal-item' }, [
+          el('span', { class: 'meal-item-main', style: { cursor: 'default' } }, [
+            el('span', { class: 'meal-item-label' }, getExercise(ex.exerciseId)?.label || 'Exercice'),
+            el('span', { class: 'meal-item-qty' },
+              `${ex.sets} × ${ex.reps}` +
+                (typeof ex.weightKg === 'number' ? ` à ${formatNumber(ex.weightKg)} kg` : '')
+            ),
+          ]),
+          el('button', {
+            type: 'button', class: 'chip-remove',
+            'aria-label': `Retirer ${getExercise(ex.exerciseId)?.label || 'cet exercice'}`,
+            onClick: () => { drafted = drafted.filter((_, j) => j !== i); draw(); },
+          }, '×'),
+        ])
+      ),
+      combobox({
+        id: 'activity-new-ex',
+        label: 'Exercice',
+        items: STRENGTH_EXERCISES,
+        value: choix,
+        onPick: (id) => { choix = id; draft.exerciseId = id; },
+      }),
+      series.wrap,
+      reps.wrap,
+      charge.wrap,
+      erreur && el('p', { class: 'field-error', role: 'status' },
+        'Il faut au moins des séries et des répétitions.'
+      ),
+      el('div', { class: 'card-actions' }, [
+        el('button', { type: 'button', class: 'btn btn-sm', onClick: ajouter }, 'Ajouter l’exercice'),
+      ]),
+    ]);
+  }
+
+  /**
+   * Ce que la montre a mesure.
+   *
+   * N'apparait que si un appareil a ete declare. Pour tous les autres, ces
+   * champs seraient invitables a remplir et impossibles a renseigner -- la
+   * regle tenue depuis le debut : pas de champ qu'on ne pourrait pas remplir.
+   *
+   * Ces valeurs-la sont des MESURES. Quand elles existent, elles priment sur
+   * l'estimation par les METs, qui n'est qu'un ordre de grandeur : personne ne
+   * prefere une formule a un capteur.
+   */
+  function wearableBlock() {
+    if (!capabilities.wearable) return null;
+    const current = data();
+
+    const champ = (key, id, label, unite, extra = {}) => {
+      const node = el('input', {
+        type: 'number', id, class: 'input', inputmode: 'numeric', min: '0', ...extra,
+      });
+      node.value = current[key] ?? '';
+      const submit = () => {
+        const raw = node.value === '' ? null : Number(node.value);
+        write({ [key]: Number.isFinite(raw) && raw >= 0 ? Math.round(raw) : null });
+        draw();
+      };
+      node.addEventListener('change', submit);
+      node.addEventListener('blur', submit);
+      return el('div', { class: 'field' }, [
+        el('label', { class: 'field-label', for: id }, label),
+        el('div', { class: 'input-row' }, [node, el('span', { class: 'input-unit' }, unite)]),
+      ]);
+    };
+
+    const details = el('details', { class: 'foldable' }, [
+      el('summary', { class: 'foldable-head' }, [
+        el('span', { class: 'field-label' }, 'Relevé de ta montre'),
+        el('span', { class: `foldable-note${typeof current.measuredKcal === 'number' ? ' is-set' : ''}` },
+          typeof current.measuredKcal === 'number'
+            ? `${formatNumber(current.measuredKcal)} kcal mesurées`
+            : 'Rien de noté'
+        ),
+      ]),
+      champ('measuredKcal', 'activity-w-kcal', 'Calories actives mesurées', 'kcal', { max: '20000' }),
+      champ('avgHr', 'activity-w-hr', 'Fréquence cardiaque moyenne', 'bpm', { max: '230' }),
+      champ('maxHr', 'activity-w-hrmax', 'Fréquence cardiaque maximale', 'bpm', { max: '230' }),
+      el('p', { class: 'card-hint', style: { marginBottom: '0' } },
+        'Ce que ta montre a mesuré passe devant l’estimation de Daylog : une ' +
+          'formule ne vaut pas un capteur. Ces chiffres ne s’ajoutent à aucune ' +
+          'cible non plus.'
+      ),
+    ]);
+    return details;
   }
 
   function draw() {
@@ -394,6 +612,7 @@ export async function render({ store }) {
     const sessions = current.sessions || [];
     const totals = dayTotals(current, bodyWeight());
     const rest = current.restDay === true;
+    const mesure = typeof current.measuredKcal === 'number' ? current.measuredKcal : null;
 
     const detail = info({
       id: 'activity-kcal-info',
@@ -461,10 +680,14 @@ export async function render({ store }) {
 
       detail.panel,
 
-      totals.activeKcal !== null &&
+      // Le compteur, et un seul. Une mesure de montre passe devant
+      // l'estimation : personne ne prefere une formule a un capteur.
+      (mesure !== null || totals.activeKcal !== null) &&
         el('div', { class: 'health-trend' }, [
           el('p', { class: 'health-trend-main' },
-            `Environ ${formatNumber(totals.activeKcal)} kcal actives.`
+            mesure !== null
+              ? `${formatNumber(mesure)} kcal actives, d’après ta montre.`
+              : `Environ ${formatNumber(totals.activeKcal)} kcal actives.`
           ),
           el('p', { class: 'card-hint', style: { margin: '0.375rem 0 0' } },
             'Elles ne s’ajoutent à aucune cible.'
@@ -477,6 +700,8 @@ export async function render({ store }) {
         ),
 
       addForm(),
+
+      wearableBlock(),
 
       (sessions.length > 0 || typeof current.meters === 'number' || current.restDay != null) &&
         el('div', { class: 'card-actions' }, [

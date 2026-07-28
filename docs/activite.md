@@ -127,6 +127,50 @@ contrôle les deux.
 | `src/modules/index.js` | déclaration du module et clés de résumé |
 | `tests/activity.test.js` | 23 vérifications |
 
+## La saisie, après le premier essai
+
+Quatre changements demandés à l'usage, tous pour la même raison : la friction
+tue le suivi.
+
+**La liste se cherche à la frappe.** Trente activités dans un `<select>` se
+parcourent au doigt, ligne par ligne. On tape trois lettres, la liste se réduit,
+et elle reste entière si on ne tape rien — pour qui préfère parcourir. Même
+motif que la recherche d'aliments.
+
+**La durée se saisit dans l'unité qu'on veut.** Une randonnée se compte en
+heures. Obliger à convertir « 2 h 15 » en 135 avant de le taper est le genre de
+friction qui fait qu'on note la séance « plus tard », c'est-à-dire jamais. Le
+stockage, lui, reste en minutes.
+
+**Les séries, répétitions et charges viennent des exercices.** Une séance n'a pas
+UNE charge : elle en a autant que d'exercices. `4×10 à 60 kg` et `3×12 à 20 kg`
+ne se résument à aucune moyenne, et demander « poids soulevé » pour la séance
+entière obligeait à additionner de tête. On saisit exercice par exercice, et la
+séance porte leurs totaux : séries, répétitions, et surtout **volume**
+(`Σ séries × répétitions × charge`) — la mesure qui dit si une séance a été plus
+lourde que la précédente.
+
+Un exercice au poids du corps compte ses répétitions mais pas son volume : exclu
+du total plutôt que compté zéro, comme partout ailleurs.
+
+**Un seul compteur de calories.** Elles ne s'affichent plus sur chaque ligne de
+séance. Répétées, elles donnaient à un ordre de grandeur l'allure d'une mesure,
+et transformaient un relevé en décompte de ce qu'on a « mérité ». Un compteur, en
+haut, et c'est tout.
+
+## Quand on a une montre
+
+Un bloc « Relevé de ta montre » apparaît **seulement si un appareil a été
+déclaré** — pour tous les autres, ces champs seraient impossibles à remplir.
+
+Il porte les calories actives mesurées, la fréquence cardiaque moyenne et la
+maximale. Quand une mesure existe, **elle prime sur l'estimation par les METs** :
+personne ne préfère une formule à un capteur. Elle ne s'ajoute à aucune cible
+non plus — la règle du module ne change pas selon la provenance du chiffre.
+
+L'import direct depuis l'appareil reste à voir : il suppose un pont système
+(Health Connect, HealthKit) et se discutera à ce moment-là.
+
 ## Ce qui reste à faire
 
 - **Les exercices personnels.** Le catalogue est fermé. L'ouvrir demande le même
@@ -136,6 +180,11 @@ contrôle les deux.
 - **L'intensité par séance.** Le champ existe dans les données (`met`) et n'a pas
   d'interface : la même séance de musculation vaut du simple au double selon la
   charge et les temps de repos.
+- **La table calorique par profil de référence.** Demandée, pas encore faite : le
+  calcul actuel est `(MET − 1) × poids × heures`, qui tient déjà compte de la
+  masse déplacée mais d'aucune différence de composition corporelle. Le point à
+  trancher avant de la construire est *quelle variable* l'alimente — voir la
+  question laissée en suspens dans `passation.md`.
 - **Le lien avec le niveau d'activité du profil.** À terme, quelqu'un qui note
   ses séances tous les jours n'aurait plus besoin de déclarer une moyenne
   hebdomadaire. Attention : c'est exactement là que le double comptage

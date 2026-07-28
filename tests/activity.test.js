@@ -17,6 +17,12 @@ import {
   sessionCalories,
   dayTotals,
   sanitize,
+  DURATION_UNITS,
+  STRENGTH_EXERCISES,
+  toMinutes,
+  fromMinutes,
+  getExercise,
+  strengthTotals,
 } from '../src/core/activity.js';
 import { registerCoreModules } from '../src/modules/index.js';
 import { getModule, clearRegistry } from '../src/core/modules.js';
@@ -253,4 +259,77 @@ test('aucun equivalent en poussees n est calcule pour un fauteuil', () => {
   assert.equal(moveTerms('walking').counts, true);
   assert.equal(moveTerms('aids').counts, true);
   assert.equal(moveTerms(null).counts, true);
+});
+
+// -------------------------------------------------------- duree et charges
+
+test('la duree se saisit dans l unite qu on veut, se stocke en minutes', () => {
+  // Une randonnee se compte en heures. Obliger a convertir « 2 h 15 » en 135
+  // avant de le taper est la friction qui fait qu'on note la seance « plus
+  // tard », c'est-a-dire jamais.
+  assert.equal(toMinutes(45, 'min'), 45);
+  assert.equal(toMinutes(2.25, 'h'), 135);
+  assert.equal(fromMinutes(135, 'h'), 2.25);
+  assert.equal(fromMinutes(45, 'min'), 45);
+  assert.equal(toMinutes(null, 'h'), null);
+  assert.equal(toMinutes(5, 'siecles'), null);
+});
+
+test('chaque exercice de renforcement a un identifiant unique', () => {
+  assert.equal(new Set(STRENGTH_EXERCISES.map((e) => e.id)).size, STRENGTH_EXERCISES.length);
+  for (const e of STRENGTH_EXERCISES) assert.ok(e.label && e.group, e.id);
+  assert.equal(getExercise('squat').label, 'Squat');
+  assert.equal(getExercise('inconnu'), null);
+});
+
+/**
+ * Le volume, et pourquoi il ne se saisit pas a la main.
+ *
+ * Une seance n'a pas UNE charge et UN nombre de repetitions : elle en a autant
+ * que d'exercices. 4x10 a 60 kg et 3x12 a 20 kg ne se resument a aucune
+ * moyenne, et demander « poids soulevé » pour la seance entiere obligeait a
+ * additionner de tete.
+ */
+test('les totaux d une seance viennent de ses exercices', () => {
+  const out = strengthTotals([
+    { exerciseId: 'squat', sets: 4, reps: 10, weightKg: 60 },
+    { exerciseId: 'bench', sets: 3, reps: 12, weightKg: 20 },
+  ]);
+  assert.equal(out.sets, 7);
+  assert.equal(out.reps, 4 * 10 + 3 * 12);
+  assert.equal(out.volumeKg, 4 * 10 * 60 + 3 * 12 * 20);
+  assert.equal(out.exercises, 2);
+});
+
+test('un exercice sans charge compte ses repetitions, pas son volume', () => {
+  // Les tractions au poids du corps : le nombre de repetitions est un fait, le
+  // volume souleve ne l'est pas tant qu'on n'a pas dit combien on pese.
+  const out = strengthTotals([
+    { exerciseId: 'pullup', sets: 4, reps: 8 },
+    { exerciseId: 'squat', sets: 3, reps: 10, weightKg: 50 },
+  ]);
+  assert.equal(out.sets, 7);
+  assert.equal(out.reps, 4 * 8 + 3 * 10);
+  assert.equal(out.volumeKg, 3 * 10 * 50, 'les tractions sont exclues du volume');
+});
+
+test('une liste d exercices vide ne remonte que des trous', () => {
+  const out = strengthTotals([]);
+  assert.equal(out.sets, null);
+  assert.equal(out.reps, null);
+  assert.equal(out.volumeKg, null);
+  assert.equal(out.exercises, null);
+});
+
+test('les totaux du jour rassemblent les exercices de toutes les seances', () => {
+  const day = {
+    sessions: [
+      { activityId: 'strength', minutes: 45, exercises: [{ sets: 4, reps: 10, weightKg: 60 }] },
+      { activityId: 'strength', minutes: 30, exercises: [{ sets: 3, reps: 10, weightKg: 40 }] },
+    ],
+  };
+  const out = dayTotals(day, 70);
+  assert.equal(out.sets, 7);
+  assert.equal(out.reps, 70);
+  assert.equal(out.volumeKg, 4 * 10 * 60 + 3 * 10 * 40);
 });
