@@ -450,7 +450,17 @@ body {
   border-color: var(--border-strong);
 }
 
+/* Conteneur souple plutot qu'un simple `span` : la pastille « maintenant » est
+   ajoutee en JavaScript, collee au libelle, sans espace entre les deux. En
+   ligne, « Après-midi » et « MAINTENANT » formaient donc un mot insecable --
+   aucun point de coupure ou passer a la ligne -- et le titre debordait de
+   quelques pixels a 200 % de taille de texte. Deux elements d'un conteneur
+   flexible peuvent, eux, toujours se separer. */
 .checkin-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
   font-size: 0.9375rem;
   font-weight: 600;
 }
@@ -458,7 +468,6 @@ body {
 /* Repere du moment de la journee. Un mot, pas seulement une couleur : la
    couleur seule n'est pas percue par tout le monde. */
 .checkin-now {
-  margin-left: 0.5rem;
   padding: 0.0625rem 0.5rem;
   font-size: 0.6875rem;
   font-weight: 600;
@@ -467,7 +476,6 @@ body {
   color: var(--accent-text);
   background: var(--accent-soft);
   border-radius: 1rem;
-  vertical-align: 0.0625rem;
 }
 
 .checkin-time {
