@@ -215,6 +215,8 @@ export function energyNeeds({
   // l'estimation reste celle de la formule -- c'est le cas de quelqu'un qui ne
   // se pese pas, et ce n'est pas un defaut.
   rows = null,
+  // 'strict' (defaut) ou 'loose'. Voir CALIBRATION_MODES.
+  calibration: mode = 'strict',
 }) {
   const basal = basalRate({ weightKg, heightCm, ageYears, body, at });
   if (basal.value === null) return { maintenance: null, target: null, ...basal };
@@ -239,12 +241,13 @@ export function energyNeeds({
    * journal alimentaire qui est incomplet -- et adopter le chiffre reviendrait
    * a proposer une cible batie sur des repas qui n'ont pas ete notes.
    */
-  let calibration = rows ? observedExpenditure(rows) : null;
+  const seuils = calibrationMode(mode);
+  let calibration = rows ? observedExpenditure(rows, seuils) : null;
   if (calibration?.value) {
     const deviation = Math.abs(calibration.value - formula) / formula;
-    if (deviation <= CALIBRATION.maxDeviation) {
+    if (deviation <= seuils.maxDeviation) {
       maintenance = calibration.value;
-      calibration = { ...calibration, applied: true, formula: Math.round(formula) };
+      calibration = { ...calibration, applied: true, formula: Math.round(formula), mode: seuils.id };
     } else {
       calibration = {
         ...calibration,
@@ -252,6 +255,7 @@ export function energyNeeds({
         reason: 'implausible',
         formula: Math.round(formula),
         deviation: Math.round(deviation * 100),
+        mode: seuils.id,
       };
     }
   }
@@ -452,6 +456,49 @@ export const CALIBRATION = {
   // maladie. On garde alors la formule, et on le dit.
   maxDeviation: 0.4,
 };
+
+/**
+ * Deux exigences, parce que deux usages.
+ *
+ * Les seuils ci-dessus supposent quelqu'un qui pese et note ses repas
+ * serieusement. C'est une minorite : vingt-et-une journees de repas completes
+ * sur six semaines, beaucoup de gens ne les atteindront jamais, et le recalage
+ * ne se declencherait alors pour personne -- une fonctionnalite qui n'existe
+ * qu'en theorie.
+ *
+ * Le mode `indicatif` divise les exigences par deux environ. Il donne un
+ * chiffre plus tot, donc plus fragile, ET IL LE DIT : c'est la difference
+ * entre annoncer une precision qu'on n'a pas et annoncer un ordre de grandeur
+ * assume. La cible calorique reste plafonnee par le metabolisme de base dans
+ * les deux cas -- ce garde-fou-la ne se negocie pas.
+ */
+export const CALIBRATION_MODES = {
+  strict: {
+    id: 'strict',
+    label: 'Suivi sérieux',
+    hint: 'Six semaines de pesées et de repas notés. Le chiffre le plus solide.',
+    minDays: 42,
+    minWeighings: 8,
+    minIntakeDays: 21,
+    maxDeviation: 0.4,
+  },
+  loose: {
+    id: 'loose',
+    label: 'Juste pour voir',
+    hint: 'Un ordre de grandeur dès trois semaines, forcément plus approximatif.',
+    minDays: 21,
+    minWeighings: 5,
+    minIntakeDays: 10,
+    // Plus tolerant, parce qu'avec moins de journees notees la moyenne des
+    // apports est mecaniquement moins fidele -- refuser au moindre ecart
+    // reviendrait a ne jamais rien afficher dans ce mode.
+    maxDeviation: 0.5,
+  },
+};
+
+export function calibrationMode(id) {
+  return CALIBRATION_MODES[id] || CALIBRATION_MODES.strict;
+}
 
 /**
  * Moyenne des apports, debarrassee de ses extremes.

@@ -12,7 +12,7 @@
 
 import { el, mount, announce } from './dom.js';
 import { topbar } from './menu.js';
-import { scale, textarea } from './controls.js';
+import { scale, textarea, info } from './controls.js';
 import { CHECKIN_SLOTS, createCheckin } from '../modules/index.js';
 import { enabledModules } from '../core/modules.js';
 import { formatDayLong, formatTime } from '../core/i18n.js';
@@ -247,7 +247,42 @@ export function createExpressView({ store, root, go }) {
       el('main', { class: 'app', id: 'main' }, [
         backupBanner(),
         el('div', { class: 'card' }, [
-          el('h2', { class: 'card-title' }, 'Ta journée en bref'),
+          (() => {
+            /*
+             * Le « i » de l'ecran du jour.
+             *
+             * Il est PERMANENT, et c'est tout l'objet de sa presence ici. Tous
+             * les autres « i » de l'application vivent derriere une condition
+             * -- deux cycles complets, quatre pesees, six semaines de
+             * recalage -- si bien qu'une installation neuve n'en affichait
+             * aucun, nulle part. L'explication n'apparaissait qu'une fois
+             * qu'on n'en avait plus besoin.
+             *
+             * Celui-ci existe des la premiere seconde, sur l'ecran que tout le
+             * monde ouvre. C'est lui qui apprend que le petit rond se touche.
+             */
+            const detail = info({
+              id: 'express-info',
+              label: 'Comment lire cet écran',
+              text: [
+                'Rien n’est pré-rempli, et c’est voulu : une valeur posée d’office ' +
+                  'au milieu finit enregistrée comme une vraie réponse. Un chiffre ' +
+                  'que tu n’as pas touché reste « non renseigné » et sort de tous ' +
+                  'les calculs. ',
+                'Répondre à une question suffit à enregistrer le moment — il n’y a ' +
+                  'pas de bouton à chercher. Re-toucher la valeur choisie l’efface. ',
+                'Ces petits ronds, ailleurs dans l’application, expliquent toujours ' +
+                  'd’où sort le chiffre affiché juste à côté.',
+              ],
+            });
+            return el('div', {}, [
+              el('div', { class: 'card-head' }, [
+                el('h2', { class: 'card-title' }, 'Ta journée en bref'),
+                detail.button,
+              ]),
+              detail.panel,
+            ]);
+          })(),
           ...CHECKIN_SLOTS.map(renderCheckin),
         ]),
         renderNote(),

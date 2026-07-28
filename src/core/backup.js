@@ -21,6 +21,7 @@
  */
 
 import * as db from './db.js';
+import { getModule } from './modules.js';
 import { SCHEMA_VERSION, migrate } from './schema.js';
 import { isValidKey } from './date.js';
 
@@ -44,11 +45,54 @@ export async function buildBackup({ modules = null, from = null, to = null } = {
   const partial = Boolean(modules) || Boolean(from) || Boolean(to);
 
   if (modules) {
-    const keep = new Set(modules);
+    /*
+     * Un identifiant peut designer un module entier (`health`) ou une seule de
+     * ses parts (`health:doses`).
+     *
+     * Le decoupage en parts existe parce que « Santé » en un seul bloc emporte
+     * poids, douleur, symptomes ET traitements. Un medecin du sport n'a pas
+     * besoin de la liste des antidepresseurs, et devoir la montrer pour parler
+     * d'une douleur au genou est exactement la contrainte que l'application
+     * refuse partout ailleurs : si l'on choisit de partager, on choisit quoi.
+     */
+    const wanted = new Map(); // id de module -> Set de cles, ou null pour tout
+    for (const entry of modules) {
+      const [id, part] = String(entry).split(':');
+      if (!part) {
+        wanted.set(id, null);
+        continue;
+      }
+      const keys = getModule(id)?.shareParts?.find((p) => p.id === part)?.keys;
+      if (!keys) continue;
+      const current = wanted.get(id);
+      // Un module deja demande en entier le reste : on n'y retire rien.
+      if (current === null && wanted.has(id)) continue;
+      wanted.set(id, new Set([...(current || []), ...keys]));
+    }
+
     days = days.map((d) => ({
       ...d,
       modules: Object.fromEntries(
-        Object.entries(d.modules || {}).filter(([id]) => keep.has(id))
+        Object.entries(d.modules || {})
+          .filter(([id]) => wanted.has(id))
+          .map(([id, value]) => {
+            const keys = wanted.get(id);
+            if (!keys || !value || typeof value !== 'object') return [id, value];
+            return [
+              id,
+              Object.fromEntries(
+                // `updatedAt` suit toujours : sans lui, la fusion a la
+                // restauration ne saurait plus quelle version est la plus
+                // recente.
+                Object.entries(value).filter(([k]) => keys.has(k) || k === 'updatedAt')
+              ),
+            ];
+          })
+          // Une section videe par le decoupage ne part pas non plus.
+          .filter(([, value]) => {
+            if (!value || typeof value !== 'object') return value !== null && value !== undefined;
+            return Object.keys(value).some((k) => k !== 'updatedAt');
+          })
       ),
     }));
     // Une journee dont il ne reste rien apres filtrage ne part pas.

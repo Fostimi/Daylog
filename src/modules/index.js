@@ -38,7 +38,12 @@ export function registerCoreModules() {
     essential: true, // le journal ne peut pas exister sans lui
     express: true,
     order: 10,
-    shareable: false, // le journal intime ne part jamais dans un export partiel
+    // Partageable comme tout le reste. La premiere version l'interdisait « pour
+    // proteger » -- c'etait decider a la place des gens de ce qu'ils ont le
+    // droit de montrer. Un extrait ne part jamais tout seul : il faut aller le
+    // chercher, section par section. Interdire n'ajoutait aucune securite et
+    // retirait un usage legitime (montrer son suivi d'humeur a un psy).
+    shareable: true,
     summarize(data) {
       return {
         mood: checkinMean(data, 'mood'),
@@ -210,6 +215,22 @@ export function registerCoreModules() {
     icon: 'health',
     defaultEnabled: false,
     order: 55,
+    /*
+     * L'extrait se decoupe.
+     *
+     * « Santé » en un seul bloc emporte poids, masse grasse, douleur,
+     * symptomes ET traitements. Un medecin du sport n'a pas besoin de la liste
+     * des antidepresseurs, et devoir la montrer pour parler d'une douleur au
+     * genou est exactement la contrainte que l'application refuse ailleurs.
+     *
+     * Chaque part nomme les cles qu'elle emporte : le decoupage se fait a la
+     * donnee, pas au module.
+     */
+    shareParts: [
+      { id: 'measures', label: 'Mesures', keys: ['weight', 'bodyFat', 'temp', 'bp', 'spo2', 'bpmRest', 'bpmMin', 'bpmMax'] },
+      { id: 'symptoms', label: 'Douleur et symptômes', keys: ['pain', 'digestion', 'symptoms'] },
+      { id: 'doses', label: 'Traitements', keys: ['doses'] },
+    ],
     view: () => import('./views/health.js'),
     summarize(data) {
       const n = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
@@ -280,7 +301,9 @@ export function registerCoreModules() {
     essential: true,
     express: true,
     order: 60,
-    shareable: false,
+    // Meme raison que l'humeur : c'est la personne qui choisit ce qu'elle
+    // partage, sans restriction posee d'avance.
+    shareable: true,
     summarize(data) {
       const text = data?.text;
       return { hasNote: text && text.trim() ? 1 : null };

@@ -416,6 +416,11 @@ export async function render({ store }) {
     mount(container, [
       el('div', { class: 'card-head' }, [
         el('h2', { class: 'card-title' }, 'Bouger'),
+        // Le « i » est ici et non dans le bloc des calories : celui-la
+        // n'apparait qu'une fois une seance notee ET un poids connu, donc
+        // jamais le premier jour -- au moment precis ou l'on se demande a quoi
+        // servent ces chiffres.
+        detail.button,
         // Ce qui a ete fait passe avant la case cochee. « Jour de repos » au-dessus
         // d'une seance de 45 minutes se contredirait -- et rien n'interdit de se
         // reposer de l'entrainement tout en ayant marche.
@@ -454,15 +459,13 @@ export async function render({ store }) {
         ? el('div', {}, sessions.map(sessionRow))
         : null,
 
+      detail.panel,
+
       totals.activeKcal !== null &&
         el('div', { class: 'health-trend' }, [
-          el('div', { class: 'health-trend-head' }, [
-            el('p', { class: 'health-trend-main' },
-              `Environ ${formatNumber(totals.activeKcal)} kcal actives.`
-            ),
-            detail.button,
-          ]),
-          detail.panel,
+          el('p', { class: 'health-trend-main' },
+            `Environ ${formatNumber(totals.activeKcal)} kcal actives.`
+          ),
           el('p', { class: 'card-hint', style: { margin: '0.375rem 0 0' } },
             'Elles ne s’ajoutent à aucune cible.'
           ),

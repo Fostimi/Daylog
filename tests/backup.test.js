@@ -8,6 +8,13 @@ import {
   restoreBackup, backupFilename, daysSinceBackup, shouldRemindBackup, FORMAT,
 } from '../src/core/backup.js';
 import { SCHEMA_VERSION } from '../src/core/schema.js';
+import { registerCoreModules } from '../src/modules/index.js';
+import { getModule, clearRegistry } from '../src/core/modules.js';
+
+/** Base vierge, pour les tests de decoupage qui ecrivent leurs propres fiches. */
+async function reset() {
+  await freshDB();
+}
 
 beforeEach(freshDB);
 
@@ -284,4 +291,97 @@ test("l'urgence de sauvegarde monte en deux paliers, jamais plus", async () => {
   // Jamais sauvegarde, avec un historique consequent.
   assert.equal(backupUrgency({ lastBackupAt: null }, { totalDays: 20, now }), 'due');
   assert.equal(backupUrgency({ lastBackupAt: null }, { totalDays: 90, now }), 'overdue');
+});
+
+// ------------------------------------------------- partage par parts
+
+/**
+ * Le decoupage d'un extrait.
+ *
+ * « Santé » en un seul bloc emporte poids, douleur, symptomes ET traitements.
+ * Un medecin du sport n'a pas besoin de la liste des antidepresseurs, et devoir
+ * la montrer pour parler d'une douleur au genou est exactement la contrainte
+ * que l'application refuse partout ailleurs.
+ */
+test('un extrait peut ne porter qu une part d un module', async () => {
+  clearRegistry();
+  registerCoreModules();
+  await reset();
+  await db.putDay(
+    {
+      date: '2026-03-01',
+      schemaVersion: 1,
+      updatedAt: '2026-03-01T20:00:00.000Z',
+      modules: {
+        health: {
+          weight: 72.4,
+          pain: { level: 3 },
+          doses: [{ id: 'trt_a', label: 'Methylphenidate', dose: 20, unit: 'mg' }],
+          updatedAt: '2026-03-01T20:00:00.000Z',
+        },
+        note: { text: 'journee difficile' },
+      },
+    },
+    { date: '2026-03-01', weightKg: 72.4 }
+  );
+
+  const doses = await buildBackup({ modules: ['health:doses'] });
+  const jour = doses.days[0].modules.health;
+  assert.deepEqual(Object.keys(jour).sort(), ['doses', 'updatedAt']);
+  assert.equal(jour.doses[0].label, 'Methylphenidate');
+  assert.equal(doses.days[0].modules.note, undefined, 'le journal ne suit pas');
+
+  const mesures = await buildBackup({ modules: ['health:measures'] });
+  assert.equal(mesures.days[0].modules.health.weight, 72.4);
+  assert.equal(mesures.days[0].modules.health.doses, undefined);
+  assert.equal(mesures.days[0].modules.health.pain, undefined);
+
+  clearRegistry();
+});
+
+test('demander deux parts les reunit, demander le module entier l emporte', async () => {
+  clearRegistry();
+  registerCoreModules();
+  await reset();
+  await db.putDay(
+    {
+      date: '2026-03-01',
+      schemaVersion: 1,
+      modules: { health: { weight: 72.4, pain: { level: 3 }, doses: [{ id: 'a' }] } },
+    },
+    { date: '2026-03-01' }
+  );
+
+  const deux = await buildBackup({ modules: ['health:measures', 'health:symptoms'] });
+  const cles = Object.keys(deux.days[0].modules.health).sort();
+  assert.deepEqual(cles, ['pain', 'weight']);
+
+  const tout = await buildBackup({ modules: ['health'] });
+  assert.ok(Object.keys(tout.days[0].modules.health).includes('doses'));
+  clearRegistry();
+});
+
+test('une journee videe par le decoupage ne part pas', async () => {
+  clearRegistry();
+  registerCoreModules();
+  await reset();
+  await db.putDay(
+    { date: '2026-03-01', schemaVersion: 1, modules: { health: { weight: 72 } } },
+    { date: '2026-03-01' }
+  );
+  const out = await buildBackup({ modules: ['health:doses'] });
+  assert.equal(out.days.length, 0, 'un fichier de journees vides n apprend rien');
+  clearRegistry();
+});
+
+test('plus aucune section n est interdite de partage', async () => {
+  // C'est a la personne de choisir ce qu'elle montre. Interdire n'ajoutait
+  // aucune securite -- un extrait ne part jamais tout seul -- et retirait un
+  // usage legitime, comme montrer son suivi d'humeur a un psy.
+  clearRegistry();
+  registerCoreModules();
+  for (const id of ['mood', 'note']) {
+    assert.equal(getModule(id).shareable, true, `${id} reste verrouille`);
+  }
+  clearRegistry();
 });

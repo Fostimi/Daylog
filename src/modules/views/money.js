@@ -309,6 +309,7 @@ export async function render({ store }) {
     mount(container, [
       el('div', { class: 'card-head' }, [
         el('h2', { class: 'card-title' }, 'Argent'),
+        detail.button,
         el('span', { class: 'card-count' },
           totals.balance === null
             ? 'Non renseigné'
@@ -334,19 +335,17 @@ export async function render({ store }) {
           ]),
           (totals.transferIn || totals.transferOut) &&
             el('div', { class: 'health-trend' }, [
-              el('div', { class: 'health-trend-head' }, [
-                el('p', { class: 'health-trend-main' }, [
-                  'Virements : ',
-                  totals.transferIn ? `${formatMoney(totals.transferIn, currency)} reçus` : '',
-                  totals.transferIn && totals.transferOut ? ', ' : '',
-                  totals.transferOut ? `${formatMoney(totals.transferOut, currency)} versés` : '',
-                  '.',
-                ]),
-                detail.button,
+              el('p', { class: 'health-trend-main' }, [
+                'Virements : ',
+                totals.transferIn ? `${formatMoney(totals.transferIn, currency)} reçus` : '',
+                totals.transferIn && totals.transferOut ? ', ' : '',
+                totals.transferOut ? `${formatMoney(totals.transferOut, currency)} versés` : '',
+                '.',
               ]),
-              detail.panel,
             ]),
         ]),
+
+      detail.panel,
 
       list.length ? el('div', {}, list.map(entryRow)) : null,
 

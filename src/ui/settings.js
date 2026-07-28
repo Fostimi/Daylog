@@ -250,18 +250,30 @@ export function createSettingsView({ store, root, go, alert = null }) {
         el('div', { class: 'card' }, [
           el('h2', { class: 'card-title' }, 'Partager une partie seulement'),
           el('p', { class: 'card-hint' },
-            'Ton journal et tes humeurs ne partent jamais dans un extrait.'
+            'Un extrait ne contient que la section choisie, ni ton profil ni le ' +
+              'reste. Rien n’est verrouillé : c’est toi qui décides de ce que tu ' +
+              'montres, et de à qui.'
           ),
+          // Un module decoupe en parts propose ses parts ET son ensemble : on
+          // ne force personne a partager trois fois pour tout donner, ni a tout
+          // donner pour partager une chose.
           el('div', { class: 'card-actions' },
             allModules()
               .filter((m) => m.shareable && active.has(m.id))
-              .map((m) =>
+              .flatMap((m) => [
                 el('button', {
                   class: 'btn btn-sm',
                   type: 'button',
                   onClick: () => exportModule(m.id, m.label),
-                }, m.label)
-              )
+                }, m.label),
+                ...(m.shareParts || []).map((part) =>
+                  el('button', {
+                    class: 'btn btn-sm',
+                    type: 'button',
+                    onClick: () => exportModule(`${m.id}:${part.id}`, `${m.label} — ${part.label}`),
+                  }, `${m.label} : ${part.label.toLowerCase()}`)
+                ),
+              ])
           ),
         ]),
 

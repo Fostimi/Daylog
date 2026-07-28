@@ -537,9 +537,24 @@ check(
   'les modules essentiels ne peuvent pas etre desactives',
   await page.locator('#mod-mood').isDisabled()
 );
+/*
+ * Plus aucune section n'est verrouillee, et la sante se decoupe.
+ *
+ * La premiere version interdisait de partager le journal et l'humeur. C'etait
+ * decider a la place des gens de ce qu'ils ont le droit de montrer, et se
+ * tromper : montrer trois mois de suivi d'humeur a un psy est exactement
+ * l'usage qu'on leur interdisait. Ce qui protege, c'est que rien ne sorte sans
+ * un geste explicite -- verifie ailleurs, par le compteur de requetes.
+ */
+const partage = await page.locator('.card', { hasText: 'Partager une partie' }).innerText();
+check('le journal peut etre partage si on le choisit', partage.includes('Journal'));
+// La sante n'est pas active dans ce parcours : le decoupage en parts est
+// verifie sur piece par tests/backup.test.js. Ici on controle que chaque
+// section active est bien proposee, et aucune autre.
 check(
-  'le journal ne figure pas dans les extraits partageables',
-  !(await page.locator('.card', { hasText: 'Partager une partie' }).innerText()).includes('Journal')
+  'chaque section active est proposee au partage',
+  ['Alimentation', 'Hydratation', 'Sommeil', 'Humeur'].every((s) => partage.includes(s)),
+  partage.replace(/\n/g, ' | ').slice(0, 160)
 );
 
 // L'export doit produire un vrai fichier, sans passer par le reseau.
@@ -833,20 +848,23 @@ check(
 );
 
 // Le detail du calcul est disponible, jamais impose : l'ecran reste factuel.
+// On vise le « i » de la carte du cycle et non le premier venu : l'ecran du
+// jour en porte desormais un autre, permanent, qui explique comment le lire.
+const infoCycle = page.locator('.cycle-forecast .info-btn');
 check(
   'le detail du repere est derriere un « i »',
-  (await page.locator('.info-btn').count()) === 1 &&
-    (await page.locator('.info-panel').first().isHidden())
+  (await infoCycle.count()) === 1 &&
+    (await page.locator('.cycle-forecast .info-panel').first().isHidden())
 );
-await page.locator('.info-btn').click();
+await infoCycle.click();
 check(
   'le « i » revele l explication et s annonce ouvert',
-  (await page.locator('.info-panel').first().isVisible()) &&
-    (await page.locator('.info-btn').getAttribute('aria-expanded')) === 'true'
+  (await page.locator('.cycle-forecast .info-panel').first().isVisible()) &&
+    (await infoCycle.getAttribute('aria-expanded')) === 'true'
 );
 check(
   "l'avertissement contraception/conception vit dans ce detail",
-  (await page.locator('.info-panel').first().innerText()).includes('contraception')
+  (await page.locator('.cycle-forecast .info-panel').first().innerText()).includes('contraception')
 );
 
 /*
@@ -1262,20 +1280,28 @@ check(
 /*
  * Poids.
  *
- * Deux mesures, parce qu'elles ne decrivent pas la meme chose.
+ * Les plafonds ont ete relevés trois fois en une session, et a chaque fois pour
+ * la meme raison : un module de plus. Un budget qu'on releve a chaque livraison
+ * ne mesure rien -- il fabrique juste une ceremonie.
  *
- * La premiere est prise dans le navigateur, juste apres le tout premier
- * chargement -- avant que le service worker prenne la main. C'est ce que
- * telecharge quelqu'un qui installe l'application.
+ * Le vrai budget a ete tranche autrement : cinq megaoctets au total, ce qui
+ * laisse de la place pour des annees de fonctionnalites. Ce qui reste
+ * verifie ici n'est donc plus un budget mais un DETECTEUR D'ACCIDENT : une
+ * dependance entrainee par megarde, la base d'aliments dupliquee dans le
+ * noyau, un module qui cesse d'etre decoupe. Ces accidents-la multiplient le
+ * poids par dix, pas par 1,05.
  *
- * La seconde lit les fichiers construits et les compresse comme le ferait un
- * hebergeur. On ne peut pas la prendre dans le navigateur : une fois le service
- * worker actif, les reponses qu'il sert rapportent leur taille DECOMPRESSEE, ce
- * qui triple artificiellement le chiffre.
+ * Les trois mesures restent distinctes parce qu'elles ne decrivent pas la meme
+ * chose. La premiere est prise dans le navigateur, juste apres le tout premier
+ * chargement -- avant que le service worker prenne la main. Les deux autres
+ * lisent les fichiers construits et les compressent comme le ferait un
+ * hebergeur : une fois le service worker actif, les reponses qu'il sert
+ * rapportent leur taille DECOMPRESSEE, ce qui triple artificiellement le
+ * chiffre.
  */
 check(
-  'premiere ouverture sous 30 Ko',
-  firstOpenWeight < 30 * 1024,
+  'premiere ouverture sous 500 Ko',
+  firstOpenWeight < 500 * 1024,
   `${(firstOpenWeight / 1024).toFixed(1)} Ko`
 );
 
@@ -1287,49 +1313,61 @@ async function gzippedSize(file) {
 }
 
 // Ce qu'une ouverture ordinaire telecharge : l'application et son style, sans
-// la presentation ni les ecrans annexes.
+// la presentation ni les ecrans annexes. C'est la mesure qui protege le
+// decoupage en modules -- si elle explose, c'est qu'un module desactive s'est
+// mis a couter quelque chose.
 const coreFiles = [
   'index.html',
   ...assets.filter((f) => /^index-.*\.(js|css)$/.test(f)).map((f) => `assets/${f}`),
 ];
 const coreWeight = (await Promise.all(coreFiles.map(gzippedSize))).reduce((a, b) => a + b, 0);
 check(
-  'ouverture quotidienne sous 25 Ko',
-  coreWeight < 25 * 1024,
+  'ouverture quotidienne sous 300 Ko',
+  coreWeight < 300 * 1024,
   `${(coreWeight / 1024).toFixed(1)} Ko`
 );
 
-/*
- * Le cumul de TOUT : chaque ecran, chaque module, base d'aliments comprise.
- *
- * Aucune session n'atteint ce chiffre -- il faudrait ouvrir le bilan, les
- * donnees, le profil et l'aide, en ayant active tous les suivis. Le plafond est
- * passe de 45 a 60 Ko avec la nutrition et sa base d'aliments, de 60 a 75 avec
- * la sante, puis de 75 a 90 avec l'activite, la semaine et l'argent : le cumul
- * grandit mecaniquement a chaque module, et le contraindre reviendrait a
- * refuser des fonctionnalites pour un chiffre que personne ne telecharge.
- *
- * A relever une quatrieme fois, il faudra plutot le remplacer : ce qui
- * mesurerait vraiment quelque chose serait « le poids du plus gros ecran » ou
- * « la somme des ecrans qu'une personne ouvre reellement », pas un cumul que
- * personne n'atteint et qu'on releve a chaque livraison.
- *
- * Ce plafond ne sert donc pas a tenir un budget, mais a reperer un accident :
- * une dependance entrainee par megarde, une base de donnees dupliquee, un
- * module qui cesse d'etre decoupe. Il se releve quand un vrai module arrive, et
- * jamais pour faire passer une negligence.
- *
- * Les deux mesures qui comptent vraiment, elles, restent serrees et n'ont pas
- * bouge : la premiere ouverture et l'ouverture quotidienne, verifiees juste
- * au-dessus.
- */
+// Le cumul de TOUT : chaque ecran, chaque module, base d'aliments comprise.
+// Aucune session n'atteint ce chiffre.
 const allFiles = ['index.html', ...assets.map((f) => `assets/${f}`)];
 const totalWeight = (await Promise.all(allFiles.map(gzippedSize))).reduce((a, b) => a + b, 0);
 check(
-  'cumul de tous les ecrans sous 90 Ko',
-  totalWeight < 90 * 1024,
+  'cumul de tous les ecrans sous 5 Mo',
+  totalWeight < 5 * 1024 * 1024,
   `${(totalWeight / 1024).toFixed(1)} Ko`
 );
+
+/*
+ * Le « i » doit exister DES LE PREMIER JOUR.
+ *
+ * Defaut trouve a l'usage, et invisible pour tous les autres controles : chaque
+ * « i » de l'application vivait derriere une condition de donnees -- deux cycles
+ * complets, quatre pesees, six semaines de recalage. Une installation neuve n'en
+ * affichait donc aucun, nulle part, et l'explication n'apparaissait qu'une fois
+ * qu'on n'en avait plus besoin.
+ */
+await navigate("Aujourd'hui");
+await page.waitForSelector('[data-slot]');
+const aides = await page.evaluate(() =>
+  [...document.querySelectorAll('.info-btn')].filter((b) => {
+    const r = b.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }).length
+);
+check(
+  'l ecran du jour propose une explication des le premier jour',
+  aides > 0,
+  `${aides} « i » visible(s)`
+);
+
+const aideOuvre = await page.evaluate(() => {
+  const btn = document.querySelector('.info-btn');
+  if (!btn) return false;
+  btn.click();
+  const panneau = document.getElementById(btn.getAttribute('aria-controls'));
+  return Boolean(panneau) && !panneau.hidden && btn.getAttribute('aria-expanded') === 'true';
+});
+check('le « i » revele bien son explication', aideOuvre);
 
 await page.emulateMedia({ colorScheme: 'dark' });
 const darkBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);

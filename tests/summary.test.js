@@ -133,12 +133,24 @@ test('le mode express ne retient que les modules marques', () => {
   assert.deepEqual(ids, ['mood', 'note'], 'les check-ins et le mot du jour');
 });
 
-test('le journal intime ne figure jamais dans un partage', () => {
+/**
+ * Regle inversee, et volontairement.
+ *
+ * La premiere version interdisait de partager le journal et l'humeur, « pour
+ * proteger ». C'etait decider a la place des gens de ce qu'ils ont le droit de
+ * montrer -- et se tromper : montrer trois mois de suivi d'humeur a un psy est
+ * exactement l'usage qu'on leur interdisait.
+ *
+ * Un extrait ne part jamais tout seul : il faut aller le chercher, section par
+ * section, et le fichier produit est remis au systeme. L'interdiction
+ * n'ajoutait donc aucune securite. Ce qui protege vraiment, c'est que rien ne
+ * sorte sans un geste explicite, et ça, c'est verifie ailleurs.
+ */
+test('aucune section n est interdite de partage', () => {
   const ids = shareableModules({}, {}).map((m) => m.id);
-  assert.ok(!ids.includes('note'), 'le journal ne se partage pas');
-  assert.ok(!ids.includes('mood'), "les check-ins d'humeur non plus");
-  assert.ok(ids.includes('nutrition'), 'la nutrition, oui');
-  assert.ok(ids.includes('sleep'));
+  for (const id of ['note', 'mood', 'nutrition', 'sleep']) {
+    assert.ok(ids.includes(id), `${id} devrait pouvoir se partager`);
+  }
 });
 
 test('l etat par defaut active les modules du noyau', () => {
