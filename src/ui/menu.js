@@ -24,6 +24,7 @@ import { el } from './dom.js';
 
 export const DESTINATIONS = [
   { id: 'today', label: "Aujourd'hui", icon: '📅' },
+  { id: 'week', label: 'Semaine', icon: '🗓️' },
   { id: 'bilan', label: 'Bilan', icon: '📊' },
   { id: 'data', label: 'Mes données', icon: '💾' },
   { id: 'profile', label: 'Profil', icon: '👤' },

@@ -58,10 +58,20 @@ async function boot() {
     }
 
     const screens = {
-      today: async () => {
+      // `options.date` ouvre une journee precise. C'est ce qui permet a la vue
+      // hebdomadaire d'y mener directement : avant, atteindre le 12 du mois
+      // demandait douze appuis sur la fleche « jour precedent ».
+      today: async (options = {}) => {
+        if (options.date && options.date !== store.getDate()) {
+          await store.loadDay(options.date);
+        }
         const view = createExpressView({ store, root, go });
         await view.refreshBackupNeed();
         view.render();
+      },
+      week: async () => {
+        const { createSemaineView } = await import('./ui/semaine.js');
+        createSemaineView({ store, root, go, alert }).render();
       },
       bilan: async () => {
         const { createBilanView } = await import('./ui/bilan.js');
@@ -89,12 +99,12 @@ async function boot() {
       },
     };
 
-    async function go(screen) {
+    async function go(screen, options = {}) {
       // On enregistre avant de quitter l'ecran : changer de vue ne doit jamais
       // faire perdre une saisie en cours.
       await store.flush().catch(() => {});
       await refreshAlert();
-      await (screens[screen] || screens.today)();
+      await (screens[screen] || screens.today)(options);
       globalThis.scrollTo(0, 0);
     }
 

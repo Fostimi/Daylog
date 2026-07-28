@@ -407,10 +407,53 @@ else ok('les donnees survivent au rechargement a l identique');
 
 // ══════════════════════════════════════════════ 5. navigation en boucle
 
-for (const ecran of ['Bilan', 'Mes données', 'Profil', 'Comment ça marche', "Aujourd'hui"]) {
+for (const ecran of ['Semaine', 'Bilan', 'Mes données', 'Profil', 'Comment ça marche', "Aujourd'hui"]) {
   await navigate(ecran);
   await auditScreen(ecran);
 }
+
+// ══════════════════════════════════════ 5 bis. la semaine et ses journees
+
+/*
+ * Ce que cherche cette section : une bande de sept jours qui n'ouvre pas la
+ * bonne journee, et une semaine future accessible.
+ *
+ * Ouvrir une journee depuis la semaine est le premier morceau d'historique
+ * navigable de l'application. S'il se trompe de jour, on ecrit dans la fiche
+ * de quelqu'un d'autre -- au sens propre : dans une autre journee que celle
+ * qu'on croit avoir sous les yeux.
+ */
+await navigate('Semaine');
+await page.waitForSelector('.week-strip');
+
+const suivanteBloquee = await page
+  .locator('.icon-btn[aria-label="Semaine suivante"]')
+  .isDisabled()
+  .catch(() => false);
+if (!suivanteBloquee) found('semaine', 'on peut avancer vers une semaine qui n a pas eu lieu');
+else ok('on ne peut pas ouvrir une semaine a venir');
+
+// Les journees a venir de la semaine en cours ne sont pas des boutons.
+const futursCliquables = await page.locator('button.week-day.is-future').count();
+if (futursCliquables) found('semaine', `${futursCliquables} journee(s) a venir restent cliquables`);
+
+// Reculer, puis ouvrir la premiere journee proposee : elle doit mener a ce
+// lundi-la, et pas a aujourd'hui.
+await page.locator('.icon-btn[aria-label="Semaine précédente"]').click();
+await page.waitForTimeout(400);
+const vise = await page.locator('button.week-day').first().getAttribute('aria-label');
+await page.locator('button.week-day').first().click();
+await page.waitForTimeout(600);
+
+const ouverte = await page.evaluate(() => document.querySelector('.topbar h1')?.textContent || '');
+// « Ouvrir lundi 6 juillet » -> on retrouve « 6 juillet » dans le titre du jour.
+const attendu = (vise || '').replace(/^Ouvrir \w+ /, '').trim();
+if (!attendu || !ouverte.includes(attendu)) {
+  found('semaine', `ouvrir « ${vise} » a mene a « ${ouverte} »`);
+} else {
+  ok('ouvrir une journee depuis la semaine mene bien a cette journee-la');
+}
+await auditScreen('journee ouverte depuis la semaine');
 for (let i = 0; i < 3; i++) {
   await navigate('Bilan');
   await navigate("Aujourd'hui");
@@ -430,14 +473,19 @@ const suivantDesactive = await page
   .isEnabled()
   .catch(() => false);
 if (!suivantDesactive) found('navigation', 'impossible de revenir vers aujourd hui');
-for (let i = 0; i < 25; i++) {
+// On revient jusqu'a ce que la fleche se desactive d'elle-meme, sans supposer
+// de combien de jours on etait parti : les sections precedentes ouvrent
+// desormais des journees quelconques depuis la vue hebdomadaire, et une borne
+// fixe ferait echouer ce controle pour une raison qui n'a rien a voir avec lui.
+let retours = 0;
+for (; retours < 80; retours++) {
   const bouton = page.locator('.icon-btn[aria-label="Jour suivant"]');
   if (!(await bouton.isEnabled())) break;
   await bouton.click();
   await page.waitForTimeout(60);
 }
 const futur = await page.locator('.icon-btn[aria-label="Jour suivant"]').isDisabled();
-if (!futur) found('navigation', 'on peut avancer dans le futur');
+if (!futur) found('navigation', `on peut avancer dans le futur (apres ${retours} pas)`);
 else ok('on ne peut pas noter une journee qui n a pas eu lieu');
 
 // ══════════════════════════════════════════════ 7. taille de texte a 200 %

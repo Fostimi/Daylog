@@ -1736,3 +1736,67 @@ body {
   padding-top: 0.5rem;
   border-top: 1px solid var(--border);
 }
+
+/* ------------------------------------------------------------------ semaine */
+
+/*
+ * La bande des sept jours.
+ *
+ * Chaque ligne est un bouton pleine largeur : c'est la cible la plus facile a
+ * viser, et le geste le plus frequent de cet ecran -- ouvrir une journee pour
+ * la completer.
+ */
+.week-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.week-day {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.75rem;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  text-align: left;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.week-day:hover {
+  border-color: var(--border-strong);
+}
+.week-day.is-tracked {
+  border-color: var(--border);
+  background: var(--surface);
+}
+/* Une journee a venir n'est pas un bouton : rien a y noter. */
+.week-day.is-future {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.week-day-name {
+  font-weight: 550;
+  min-width: 0;
+}
+.week-day-date {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.week-day-note {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.week-day-note.is-set {
+  color: var(--accent-text);
+}

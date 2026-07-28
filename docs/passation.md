@@ -20,17 +20,18 @@ est déployée sur https://fostimi.github.io/Daylog/.
 | ✅ | Santé : mesures choisies, douleur, digestion, symptômes, traitements |
 | ✅ | Activité : catalogue trié par mobilité, distance, séances, jour de repos |
 | ✅ | Recalage de l'estimation énergétique sur les pesées et les repas notés |
+| ✅ | Vue hebdomadaire : récap, comparaison, accès à chaque journée |
 | ✅ | Bilan : graphiques, moyennes, phrases de synthèse |
 | ✅ | « Comment ça marche » : ce que l'app calcule et ce qu'elle refuse |
 | ✅ | Sauvegarde, restauration, partage sélectif par module |
 | ⬜ | Argent, apprentissage, productivité |
 | ⬜ | Verrouillage par code, notifications, publication sur les stores |
 
-**Poids** : 18,0 Ko à l'ouverture quotidienne, 24,5 Ko à la première ouverture,
-68 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
+**Poids** : 18,3 Ko à l'ouverture quotidienne, 24,8 Ko à la première ouverture,
+71 Ko cumulés tous écrans et tous modules confondus (chiffre que personne ne
 télécharge). Les deux premiers sont ceux à surveiller.
 
-**Vérifications** : 247 tests unitaires, 10 fuseaux horaires, 165 vérifications
+**Vérifications** : 259 tests unitaires, 10 fuseaux horaires, 165 vérifications
 navigateur, plus un stress test qui cherche ce qu'on n'avait pas prévu.
 `npm run verify` enchaîne le tout.
 
@@ -92,10 +93,13 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 
 ## La suite, dans l'ordre suggéré
 
-1. **Vue hebdomadaire** — prévue au cahier des charges, absente aujourd'hui.
-2. **Historique navigable** — accéder à n'importe quelle journée par calendrier
-   ou recherche. Les flèches jour précédent / suivant existent, pas le reste.
-3. **Polissage** — thèmes de couleur, recalcul dynamique des quantités,
+1. **Historique navigable, la suite** — la vue hebdomadaire ouvre déjà
+   n'importe quelle journée de la semaine affichée, et on remonte de semaine en
+   semaine. Restent un calendrier mensuel et une recherche.
+2. **Argent** — dépenses par catégorie, revenus, virements, balance du jour.
+   C'est le prochain gros morceau du cahier des charges.
+3. **Apprentissage et productivité** — sessions, lectures, heures de travail.
+4. **Polissage** — thèmes de couleur, recalcul dynamique des quantités,
    réévaluation du « i » (est-il compris de tout le monde ?).
 
 ## Questions ouvertes
