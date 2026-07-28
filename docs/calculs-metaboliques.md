@@ -174,6 +174,28 @@ c'est exactement ce que le plafond de déficit cherche à empêcher par ailleurs
 
 Le recalage a donc besoin des repas notés, pas seulement des pesées.
 
+### Deux exigences, parce que deux usages
+
+Les seuils ci-dessous supposent quelqu'un qui pèse et note ses repas
+sérieusement. Vingt-et-une journées de repas complètes sur six semaines,
+beaucoup ne les atteindront jamais — et le recalage ne se déclencherait alors
+pour personne, une fonctionnalité qui n'existe qu'en théorie.
+
+D'où deux modes, `CALIBRATION_MODES` :
+
+| | Jours | Pesées | Journées de repas | Écart max |
+|---|---|---|---|---|
+| Suivi sérieux | 42 | 8 | 21 | 40 % |
+| Juste pour voir | 21 | 5 | 10 | 50 % |
+
+Le second donne un chiffre plus tôt, donc plus fragile, **et il le dit** : c'est
+la différence entre annoncer une précision qu'on n'a pas et assumer un ordre de
+grandeur. Le plancher du métabolisme de base ne se négocie dans aucun des deux.
+
+**Où le choix se pose** (arbitré, pas encore branché) : à la première ouverture,
+uniquement si le suivi alimentaire est coché — sinon la question ne veut rien
+dire — et dans le profil, pour en changer quand les besoins changent.
+
 ### Ce qu'il exige avant de se prononcer
 
 | | |
@@ -230,6 +252,39 @@ de la formule de départ, quel que soit le corps de la personne.
 
 C'est là que se joue vraiment l'inclusion : pas dans une meilleure case à
 cocher, mais dans un système qui n'a pas besoin des cases pour finir juste.
+
+## La dépense d'une séance : direction arrêtée
+
+Le calcul actuel des calories actives est `(MET − 1) × poids × heures`. Il tient
+compte de la masse déplacée, d'aucune différence de composition corporelle. La
+suite a été arbitrée en deux étages, dans cet ordre de priorité :
+
+**1. La masse grasse mesurée, si elle existe.** C'est la meilleure entrée, et la
+seule où la question du sexe ne se pose pas : le corps est décrit par ce qu'il
+est. Même logique que Katch-McArdle pour le métabolisme de base. Le module santé
+la collecte déjà.
+
+**2. Sinon, `body.calcBasis`.** Pas `identity.gender`. La distinction n'est pas
+cosmétique : `calcBasis` est la variable physiologique **déjà choisie
+explicitement**, qui gère le non-binaire (milieu des deux) et la transition
+(glissement sur trois ans). La faire servir ici conserve la décision n°6 telle
+quelle — le genre alimente une seule variable, et c'est elle qui entre dans les
+calculs. Passer par `identity.gender` ferait entrer le genre dans un second
+calcul, et la décision tomberait.
+
+Deux réserves à garder en tête au moment de construire la table :
+
+- pour tout ce qui **porte le corps** — marche, course, randonnée — la masse
+  explique déjà l'essentiel, et la référence n'ajoutera presque rien ;
+- c'est sur le **non porté** — vélo, rameur, musculation — que l'écart de masse
+  maigre compte vraiment.
+
+Une table qui appliquerait le même coefficient partout donnerait donc une fausse
+impression de précision. Mieux vaut un coefficient par famille d'activité, ou
+pas de coefficient du tout là où il n'apporte rien.
+
+Et dans tous les cas : **une mesure de montre passe devant.** Personne ne
+préfère une formule à un capteur.
 
 ## Micronutriments : lier les seuils à la physiologie, pas au genre
 

@@ -171,11 +171,46 @@ non plus — la règle du module ne change pas selon la provenance du chiffre.
 L'import direct depuis l'appareil reste à voir : il suppose un pont système
 (Health Connect, HealthKit) et se discutera à ce moment-là.
 
+## Les exercices personnels : direction arrêtée, et un non-objectif
+
+Le catalogue d'exercices de renforcement est fermé. L'ouvrir se fera **sur le
+modèle des repas fréquents**, pas sur celui d'une bibliothèque :
+
+- on tape un nom d'exercice, il est enregistré comme élément de liste
+  (identifiant stable, archivage plutôt que suppression, comme les habitudes) ;
+- il **mémorise ses dernières valeurs** — séries, répétitions, charge — et les
+  pré-remplit à la prochaine séance ;
+- la personne les modifie au fil du temps, et l'historique déjà noté ne bouge
+  pas.
+
+C'est tout. Et c'est un choix, pas une étape vers autre chose.
+
+### Ce que Daylog ne deviendra pas
+
+Fournir nous-mêmes une bibliothèque d'exercices impliquerait de les catégoriser
+— haut du corps, bas du corps, push/pull, groupes musculaires, endurance — puis
+d'assumer ce que cette catégorisation promet : programmes, minuteurs de repos,
+calculs de charge, records personnels, progression par groupe musculaire.
+
+C'est une autre application. Elle existe déjà, elle s'appelle Hevy ou Strong,
+elle est très bien faite, et elle a des années d'avance sur ce terrain.
+
+**Daylog suit ce qui a eu lieu ; il n'entraîne personne.** La différence tient en
+une phrase : un carnet d'entraînement dit quoi faire demain, un carnet de suivi
+dit ce qui s'est passé hier. Le second se remplit en trente secondes et se lit
+sur un an ; le premier demande un engagement que la plupart des gens qui ouvrent
+Daylog ne cherchent pas.
+
+Ce non-objectif vaut aussi pour la nutrition, et pour la même raison : la base
+d'aliments de Daylog compte 130 entrées face aux millions de MyFitnessPal, avec
+son lecteur de code-barres. Ce terrain-là est perdu d'avance et il ne faut pas
+s'y engager. L'avantage de Daylog n'est pas le catalogue, c'est l'honnêteté du
+calcul qu'il en tire.
+
 ## Ce qui reste à faire
 
-- **Les exercices personnels.** Le catalogue est fermé. L'ouvrir demande le même
-  soin que les habitudes : identifiants stables, archivage plutôt que
-  suppression. Le cahier des charges évoque aussi de pouvoir en proposer à la
+- **Les exercices personnels**, sur le modèle des repas fréquents décrit
+  ci-dessus. Le cahier des charges évoque aussi de pouvoir en proposer à la
   publication — cela suppose un serveur, donc rien pour l'instant.
 - **L'intensité par séance.** Le champ existe dans les données (`met`) et n'a pas
   d'interface : la même séance de musculation vaut du simple au double selon la

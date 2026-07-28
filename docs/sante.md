@@ -137,6 +137,38 @@ passées, et compléter une pesée oubliée la semaine dernière ne doit pas
 remplacer celle d'hier par une plus ancienne — l'estimation énergétique
 reculerait d'une semaine sans que rien ne l'explique.
 
+## L'horodatage des prises : direction arrêtée
+
+Une prise doit pouvoir se valider vite — depuis le check-in du matin, du midi ou
+du soir — et rester exacte dans un extrait remis à un médecin. Ces deux
+exigences tirent dans des sens opposés : le geste rapide se fait souvent **après
+coup**, et l'heure du clic n'est alors pas l'heure de la prise.
+
+Ce qui a été décidé :
+
+- chaque prise porte son **heure de prise**, modifiable. Pré-remplie à l'heure
+  du clic, corrigeable d'un geste ;
+- l'écran affiche cette heure, pas celle de la dernière modification ;
+- l'export porte la **liste des prises avec leurs heures et leurs doses figées**.
+
+### Ce qui a été écarté, et pourquoi
+
+L'idée d'un journal d'événements complet — `22:03 prise 10 mg | 22:13 modifié en
+20 mg | 22:33 supprimé` — a été examinée et écartée pour l'export.
+
+Une correction n'est pas un fait sur le corps, c'est un fait sur la frappe. Un
+médecin a besoin de savoir *quand* et *combien*, pas quand une faute de saisie a
+été rattrapée. Et surtout : un export qui révèle ce que quelqu'un a **supprimé**
+retourne la promesse de l'application contre elle. On ne peut pas dire « tu
+choisis ce que tu partages » et livrer en même temps la trace de ce qui a été
+retiré.
+
+Ce qui est conservé, en revanche : la dose figée au moment de la prise, et
+l'historique des **changements de dosage du traitement** (`doseHistory`), qui
+est bien un fait clinique — c'est lui qui permet de relire un traitement
+évolutif. La différence est nette : le dosage prescrit change, la faute de
+frappe non.
+
 ## Ce qui reste à faire
 
 - **Le recalage énergétique sur les faits.** `calibrate()` existe dans

@@ -28,11 +28,25 @@ est déployée sur https://fostimi.github.io/Daylog/.
 | ⬜ | Apprentissage, productivité |
 | ⬜ | Verrouillage par code, notifications, publication sur les stores |
 
-**Poids** : 19,1 Ko à l'ouverture quotidienne, 25,8 Ko à la première ouverture,
-78 Ko cumulés. Le budget est fixé à **5 Mo** : ce qui reste vérifié n'est plus
-un plafond mais un détecteur d'accident (une dépendance entraînée par mégarde,
-la base d'aliments dupliquée dans le noyau, un module qui cesse d'être
-découpé). Ne plus relever ces chiffres à chaque livraison.
+**Poids de l'application** : 19,1 Ko à l'ouverture quotidienne, 25,8 Ko à la
+première ouverture, 78 Ko cumulés. Le budget est fixé à **5 Mo** : ce qui reste
+vérifié n'est plus un plafond mais un détecteur d'accident (une dépendance
+entraînée par mégarde, la base d'aliments dupliquée dans le noyau, un module qui
+cesse d'être découpé). Ne plus relever ces chiffres à chaque livraison.
+
+**Poids des données** — mesuré, parce qu'une extrapolation à la louche donnait
+60 Mo par an et faisait peur pour rien :
+
+| | |
+|---|---|
+| Journée légère (humeur + note) | 153 octets |
+| Journée **très** chargée, tous modules remplis | 3,6 Ko |
+| Un an de ce régime maximal | ~1,3 Mo brut, ~130 Ko compressé |
+
+Le stockage n'est donc pas un sujet, et ne le sera pas. Si une sauvegarde paraît
+énorme, chercher ailleurs : l'export JSON *lisible* est indenté (deux à trois
+fois plus gros), et les listes accumulées pendant les essais ne se voient pas
+dans le compteur de journées.
 
 **Vérifications** : 289 tests unitaires, 10 fuseaux horaires, 165 vérifications
 navigateur (168), plus un stress test qui cherche ce qu'on n'avait pas prévu.
@@ -107,37 +121,41 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 - **Aucun identifiant HTML en double.** Ça casse silencieusement l'association
   entre un libellé et son champ. Le stress test le contrôle à chaque écran.
 
-## La suite, dans l'ordre suggéré
-
-1. **Historique navigable, la suite** — la vue hebdomadaire ouvre déjà
-   n'importe quelle journée de la semaine affichée, et on remonte de semaine en
-   semaine. Restent un calendrier mensuel et une recherche.
-2. **Apprentissage et productivité** — sessions, lectures, heures de travail.
-   Ce sont les deux dernières sections du cahier des charges sans code.
-3. **Polissage** — thèmes de couleur, recalcul dynamique des quantités,
-   réévaluation du « i » (est-il compris de tout le monde ?).
-
 ## Questions ouvertes
 
-- **La table calorique par profil de référence.** Demandée, pas construite : il
-  faut d'abord trancher *quelle variable* l'alimente. Le calcul actuel
-  (`(MET − 1) × poids × heures`) tient déjà compte de la masse déplacée. Ajouter
-  une différence de composition corporelle est légitime, mais elle doit passer
-  par `body.calcBasis` — la variable physiologique déjà choisie explicitement,
-  qui gère non-binaire et transition — et non par `identity.gender`. Sinon la
-  décision n°6 tombe. À valider avant de bâtir la table.
-- **Les traitements au check-in.** Demandé : pouvoir valider une prise
-  matin/midi/soir directement depuis le check-in, avec un horodatage juste (ou
-  un champ « pris à telle heure ») pour que le suivi partagé reste exact. Pas
-  encore fait.
 - **L'invitation à consulter un professionnel de santé** est aujourd'hui une
   phrase permanente dans « Comment ça marche », jamais déclenchée par un seuil.
   À rouvrir aux essais, avec l'avis des personnes concernées.
-- **Le « i » était invisible**, et c'est corrigé : il n'en existait aucun sur une
-  installation neuve, tous étant conditionnés à des données accumulées. Reste à
-  savoir si, maintenant qu'il est là dès le premier jour, il est compris.
-- **Le modèle économique** (achat unique, publicités légères) n'est pas commencé
-  et n'a aucune trace dans le code. Volontaire.
+- **Le « i »** est de retour sur tous les écrans, dès le premier jour. Reste à
+  savoir s'il est compris. À réévaluer aux essais.
+- **Le modèle économique.** Le cahier des charges évoque des publicités légères
+  et un achat unique. Voir [regards.md](regards.md) : la partie publicitaire
+  entre en contradiction directe avec la promesse « aucune requête réseau », et
+  mérite d'être tranchée avant d'écrire la moindre ligne à ce sujet.
+- **La distribution.** L'application est une PWA. Android l'accepte telle
+  quelle ; iOS demande un emballage natif. Rien n'est commencé.
+
+## Ce qui a été tranché et attend d'être écrit
+
+Décisions prises, direction documentée, code à faire. Par ordre de valeur :
+
+1. **Les traitements au check-in.** Valider une prise matin / midi / soir depuis
+   le check-in, avec une **heure de prise modifiable** (pré-remplie à l'heure du
+   clic). L'export porte les prises et leurs doses figées — pas le journal des
+   corrections, voir [sante.md](sante.md) pour pourquoi.
+2. **Le mode de recalage, branché.** À la première ouverture *si et seulement si*
+   le suivi alimentaire est coché, et dans le profil pour en changer. Le noyau
+   existe (`CALIBRATION_MODES`), il n'a pas d'écran.
+3. **Les exercices personnels**, sur le modèle des repas fréquents : mémoire des
+   dernières séries / répétitions / charges. Voir [activite.md](activite.md), et
+   surtout le non-objectif qui l'accompagne.
+4. **La table calorique par activité**, en deux étages : masse grasse mesurée si
+   elle existe, sinon `body.calcBasis`. Jamais `identity.gender`. Voir
+   [calculs-metaboliques.md](calculs-metaboliques.md).
+5. **Apprentissage et productivité** — les deux dernières sections du cahier des
+   charges sans code.
+6. **Historique navigable, la suite** — calendrier mensuel et recherche. La vue
+   hebdomadaire ouvre déjà n'importe quelle journée.
 
 ## Documentation
 
@@ -154,4 +172,6 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
   aucun crédit
 - [argent.md](argent.md) — les centimes entiers, et pourquoi un virement n'est
   ni une dépense ni un revenu
+- [regards.md](regards.md) — le point après plusieurs jours : direction, forces,
+  craintes, comparaison au marché, viabilité
 - [deploiement.md](deploiement.md) — mise en ligne

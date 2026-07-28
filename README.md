@@ -28,7 +28,12 @@ application.
 | ✅ | Cycle menstruel : suivi, symptômes et repère |
 | ✅ | Écran « Comment ça marche » : ce que l'app calcule, et ce qu'elle refuse |
 | ✅ | Alimentation : 130 aliments livrés, aliments et repas à soi, cibles |
-| ⬜ | Activité physique, santé et traitements, argent, apprentissage |
+| ✅ | Santé : mesures choisies, douleur, symptômes, traitements à dose figée |
+| ✅ | Activité : catalogue trié par mobilité, distance, séances et exercices |
+| ✅ | Argent : dépenses, revenus, virements, balance |
+| ✅ | Vue hebdomadaire : récapitulatif, comparaison, accès à chaque journée |
+| ✅ | Recalage de l'estimation énergétique sur les pesées et les repas notés |
+| ⬜ | Apprentissage, productivité |
 | ⬜ | Verrouillage par code, notifications, installation depuis les stores |
 
 ## Ce que c'est
@@ -72,9 +77,9 @@ npm run build    # version de production dans dist/
 ## Vérifier
 
 ```bash
-npm test                  # 183 tests unitaires
+npm test                  # 289 tests unitaires
 npm run test:timezones    # la suite complète dans 10 fuseaux horaires
-npm run smoke             # 165 vérifications dans un vrai navigateur
+npm run smoke             # 168 vérifications dans un vrai navigateur
 npm run stress            # cherche ce qu'on n'avait pas prévu
 npm run verify            # tout l'enchaînement
 ```
@@ -104,6 +109,11 @@ Ils tranchent les arbitrages, dans cet ordre :
    rien abîmer.
 5. **L'accessibilité fait partie du socle**, pas du polissage. C'est ce que
    « inclusif » veut dire concrètement, avant le vocabulaire.
+6. **On ne range personne.** La mobilité déclarée trie ce qu'on propose, elle ne
+   retire jamais rien. Le genre entre dans un seul calcul. Aucun chiffre de
+   santé n'est qualifié de normal ou d'anormal.
+7. **C'est la personne qui choisit ce qu'elle partage**, section par section, et
+   même par morceau de section. Rien n'est verrouillé « pour la protéger ».
 
 ## Documentation
 
@@ -116,6 +126,14 @@ Ils tranchent les arbitrages, dans cet ordre :
 - [Suivi du cycle](docs/cycle.md) — les calculs, et ce que Daylog refuse de
   calculer
 - [Nutrition](docs/nutrition.md) — les décisions de conception et la base d'aliments
+- [Santé](docs/sante.md) — les bornes de saisie, les doses figées, le poids comme
+  série
+- [Activité](docs/activite.md) — pourquoi les calories d'une séance n'ouvrent
+  aucun crédit, et ce que Daylog ne deviendra pas
+- [Argent](docs/argent.md) — les centimes entiers, et pourquoi un virement n'est
+  ni une dépense ni un revenu
+- [Regards](docs/regards.md) — point d'étape sans complaisance : forces,
+  craintes, comparaison au marché, viabilité
 
 ## Sauvegardes
 
