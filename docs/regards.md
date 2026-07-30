@@ -8,6 +8,12 @@ viabilité**. Avec les craintes, et sans complaisance.
 Ce document a vocation à être relu et contesté. Il n'a pas le statut des
 décisions de [passation.md](passation.md) : c'est un avis, pas une règle.
 
+**Il a été contesté.** Après une semaine d'usage réel,
+[regards-2.md](regards-2.md) répond point par point, corrige ce qui était faux
+ici — notamment sur le temps de saisie et sur la perte de données — et prend
+position sur les idées venues depuis. Celui-ci reste tel qu'il a été écrit : un
+point d'étape se lit avec sa date.
+
 ---
 
 ## 1. Ce qui est solide, et pourquoi

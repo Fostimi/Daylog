@@ -121,6 +121,27 @@ Elles ont toutes coûté une discussion. Les rouvrir demande un argument neuf.
 - **Aucun identifiant HTML en double.** Ça casse silencieusement l'association
   entre un libellé et son champ. Le stress test le contrôle à chaque écran.
 
+## Ce qui est cassé, vérifié
+
+Trouvé après une semaine d'usage réel, reproduit dans un navigateur. Détail et
+correctifs dans [regards-2.md](regards-2.md).
+
+1. **La persistance du stockage n'est jamais demandée.** `navigator.storage
+   .persist()` n'est appelé nulle part : le stockage d'un site reste évinçable —
+   après sept jours sans visite sur iPhone hors écran d'accueil, sous pression
+   mémoire sur Android. Une application locale-first doit demander la
+   persistance, savoir si elle l'a obtenue, et le dire sinon.
+2. **Profil > cycle : deux réponses font la même chose.** « Non, pas concerné »
+   et « Je préfère ne pas répondre » enregistrent toutes deux `null`, si bien que
+   le bouton cliqué n'est pas celui qui reste coché, et que les deux éteignent le
+   module. Enregistrer `'none'` comme `'none'`, retirer `allowNone` de cette
+   question.
+3. **`active` n'est pas la photographie du jour.** Les habitudes d'une journée
+   rouverte sont enregistrées avec la liste **d'aujourd'hui** : cocher une case
+   sur une journée d'il y a trois semaines lui applique un dénominateur qui
+   n'existait pas. Entorse à la décision n°3. Le calcul doit se faire à partir
+   des `createdAt` / `archivedAt` des éléments et de la date affichée.
+
 ## Questions ouvertes
 
 - **L'invitation à consulter un professionnel de santé** est aujourd'hui une
@@ -174,4 +195,6 @@ Décisions prises, direction documentée, code à faire. Par ordre de valeur :
   ni une dépense ni un revenu
 - [regards.md](regards.md) — le point après plusieurs jours : direction, forces,
   craintes, comparaison au marché, viabilité
+- [regards-2.md](regards-2.md) — le point après une semaine d'usage : ce que
+  l'usage a démenti, les défauts trouvés, et ce que je conteste des idées neuves
 - [deploiement.md](deploiement.md) — mise en ligne
